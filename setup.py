@@ -3,6 +3,7 @@
 
 """The setup script."""
 
+import os
 from setuptools import setup, find_packages
 
 with open('README.rst') as readme_file:
@@ -13,7 +14,8 @@ with open('HISTORY.rst') as history_file:
 
 requirements = [
     'Click>=6.0',
-    # TODO: put package requirements here
+    'networkx>=1.11',
+    'numpy',
 ]
 
 setup_requirements = [

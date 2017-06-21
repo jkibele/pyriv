@@ -14,6 +14,9 @@ class GraphBuilder(object):
         if os.path.splitext(file_path)[1] == '.shp':
             self.graph = RiverGraph(data=nx.read_shp(file_path), \
                                     coastal_fcode=self.fcode)
+        elif os.path.splitext(file_path)[1] == '.graphml':
+            self.graph = RiverGraph(data=nx.read_graphml(file_path), \
+                                    coastal_fcode=self.fcode)
         else:
             self.graph = RiverGraph(data=nx.read_gpickle(file_path), \
                                     coastal_fcode=self.fcode)
@@ -39,18 +42,17 @@ class GraphBuilder(object):
 
     def write_gpickle(self, out_file_path):
         """
-        This converts the RiverGraph to a regular nx.Graph and writes it to a
-        gpickle.
+        This writes the DiGraph to a gpickle.
         """
-        nxg = nx.Graph(data=self.graph)
+        nxg = nx.DiGraph(data=self.graph)
         nx.write_gpickle(nxg, out_file_path)
 
-    def is_directed(self):
+    def write_graphml(self, out_file_path):
         """
-        This verifies that the graph is indeed a directed graph in networkx
-        (needed to verify for reading in graph data not from .shp files)
+        This writes the DiGraph to a GraphML file.
         """
-        return nx.is_directed(self.graph)
+        nxg = nx.DiGraph(data=self.graph)
+        nx.write_graphml(nxg, out_file_path)
 
 
 def has_coast_node(node_list, sg, fcode=56600):

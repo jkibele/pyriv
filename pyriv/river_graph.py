@@ -34,7 +34,7 @@ class RiverGraph(nx.DiGraph):
         To make a RiverGraph from a graph, RiverGraph(data=graph)
         """
         self.fcode = coastal_fcode
-        super(RiverGraph, self).__init__(*args, **kwargs)
+        self = super(RiverGraph, self).__init__(*args, **kwargs)
 
     def closest_node(self, pos):
         """

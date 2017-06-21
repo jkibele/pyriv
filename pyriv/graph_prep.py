@@ -45,6 +45,13 @@ class GraphBuilder(object):
         nxg = nx.Graph(data=self.graph)
         nx.write_gpickle(nxg, out_file_path)
 
+    def is_directed(self):
+        """
+        This verifies that the graph is indeed a directed graph in networkx
+        (needed to verify for reading in graph data not from .shp files)
+        """
+        return nx.is_directed(self.graph)
+
 
 def has_coast_node(node_list, sg, fcode=56600):
     """

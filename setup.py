@@ -14,7 +14,7 @@ with open('HISTORY.rst') as history_file:
 
 #this is the list of dependencies that pip uses to install
 requirements = [
-    'numpy',
+    #'numpy',
     'click',
     'networkx',
 ]
@@ -38,7 +38,7 @@ test_requirements = [
 
 setup(
     name='pyriv',
-    version='0.2.5',
+    version='0.2.6',
     description="pyriv calculates the distance from a given starting point to the closest coastal edge via waterways.",
     long_description=readme + '\n\n' + history,
     author="Jared Kibele",

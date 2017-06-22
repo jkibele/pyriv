@@ -52,7 +52,7 @@ setup(
         ]
     },
     include_package_data=True,
-    install_requires=['numpy', 'networkx'],#requirements,
+    install_requires=['numpy', 'decorator','networkx'],#requirements,
     extras_require=extra_requirements,
     license="MIT license",
     zip_safe=False,

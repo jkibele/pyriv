@@ -16,6 +16,6 @@
 #Sphinx>=1.4.8
 
 ##### Requirements added #####
-#networkx>=1.11
+#networkx
 #numpy
 

@@ -13,11 +13,11 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 #this is the list of dependencies that pip uses to install
-requirements = [
-    #'numpy',
-    'click',
-    'networkx',
-]
+#requirements = [
+#    'numpy',
+#    'click',
+#    'networkx',
+#]
 
 #extra requirements for optional features with their own dependencies
 #on install, include the named extras in square brackets after the project name..
@@ -38,7 +38,7 @@ test_requirements = [
 
 setup(
     name='pyriv',
-    version='0.2.6',
+    version='0.2.7',
     description="pyriv calculates the distance from a given starting point to the closest coastal edge via waterways.",
     long_description=readme + '\n\n' + history,
     author="Jared Kibele",
@@ -52,7 +52,7 @@ setup(
         ]
     },
     include_package_data=True,
-    install_requires=requirements,
+    install_requires=['numpy', 'networkx'],#requirements,
     extras_require=extra_requirements,
     license="MIT license",
     zip_safe=False,

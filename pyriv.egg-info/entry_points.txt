@@ -1,3 +1,0 @@
-[console_scripts]
-pyriv = pyriv.cli:main
-

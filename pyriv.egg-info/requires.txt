@@ -1,3 +1,0 @@
-Click>=6.0
-networkx>=1.10
-numpy

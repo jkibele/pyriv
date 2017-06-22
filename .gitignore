@@ -6,3 +6,4 @@ downloads
 eggs
 *.pyo
 *.pyc
+lib

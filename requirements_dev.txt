@@ -18,4 +18,5 @@
 ##### Requirements added #####
 #networkx
 #numpy
+#click
 

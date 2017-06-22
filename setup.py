@@ -14,8 +14,8 @@ with open('HISTORY.rst') as history_file:
 
 #this is the list of dependencies that pip uses to install
 requirements = [
-    'click >=6.0',
-    'networkx >=1.10',
+    'click',
+    'networkx',
     'numpy',
 ]
 

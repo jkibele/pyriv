@@ -14,9 +14,9 @@ with open('HISTORY.rst') as history_file:
 
 #this is the list of dependencies that pip uses to install
 requirements = [
+    'numpy',
     'click',
     'networkx',
-    'numpy',
 ]
 
 #extra requirements for optional features with their own dependencies

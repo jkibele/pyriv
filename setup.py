@@ -12,9 +12,10 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
+#this is the list of dependencies that pip uses to install
 requirements = [
     'Click>=6.0',
-    'networkx>=1.11',
+    'networkx>=1.10',
     'numpy',
 ]
 
@@ -31,10 +32,11 @@ setup(
     version='0.1.0',
     description="pyriv calculates the distance from a given starting point to the closest coastal edge via waterways.",
     long_description=readme + '\n\n' + history,
-    author="Haleigh Wright",
-    author_email='wright@umail.ucsb.edu',
+    author="Jared Kibele",
+    author_email='jkibele@ucsb.edu',
     url='https://github.com/jkibele/pyriv',
-    packages=find_packages(include=['pyriv']),
+    download_url='https://github.com/jkibele/pyriv/archive/0.1.tar.gz',
+    packages=find_packages(include=['pyriv'], exclude=['docs']),
     entry_points={
         'console_scripts': [
             'pyriv=pyriv.cli:main'
@@ -44,19 +46,16 @@ setup(
     install_requires=requirements,
     license="MIT license",
     zip_safe=False,
-    keywords='pyriv',
+    keywords='river distance pyriv',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
+        'Topic :: Scientific/Engineering :: GIS',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         "Programming Language :: Python :: 2",
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
     ],
     test_suite='tests',
     tests_require=test_requirements,

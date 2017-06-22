@@ -1,0 +1,70 @@
+Metadata-Version: 1.1
+Name: pyriv
+Version: 0.1.0
+Summary: pyriv calculates the distance from a given starting point to the closest coastal edge via waterways.
+Home-page: https://github.com/jkibele/pyriv
+Author: Jared Kibele
+Author-email: jkibele@ucsb.edu
+License: MIT license
+Download-URL: https://github.com/jkibele/pyriv/archive/0.1.tar.gz
+Description: =====
+        pyriv
+        =====
+        
+        
+        .. image:: https://img.shields.io/pypi/v/pyriv.svg
+                :target: https://pypi.python.org/pypi/pyriv
+        
+        .. image:: https://img.shields.io/travis/jkibele/pyriv.svg
+                :target: https://travis-ci.org/jkibele/pyriv
+        
+        .. image:: https://readthedocs.org/projects/pyriv/badge/?version=latest
+                :target: https://pyriv.readthedocs.io/en/latest/?badge=latest
+                :alt: Documentation Status
+        
+        .. image:: https://pyup.io/repos/github/jkibele/pyriv/shield.svg
+             :target: https://pyup.io/repos/github/jkibele/pyriv/
+             :alt: Updates
+        
+        
+        pyriv calculates the distance from a given starting point to the closest coastal edge via waterways.
+        
+        
+        * Free software: MIT license
+        * Documentation: https://pyriv.readthedocs.io.
+        
+        
+        Features
+        --------
+        
+        * TODO
+        
+        Credits
+        ---------
+        
+        This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
+        
+        .. _Cookiecutter: https://github.com/audreyr/cookiecutter
+        .. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+        
+        
+        
+        =======
+        History
+        =======
+        
+        0.1.0 (2017-06-20)
+        ------------------
+        
+        * First release on PyPI.
+        
+Keywords: river distance pyriv
+Platform: UNKNOWN
+Classifier: Development Status :: 2 - Pre-Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Scientific/Engineering :: GIS
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Natural Language :: English
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.6
+Classifier: Programming Language :: Python :: 2.7

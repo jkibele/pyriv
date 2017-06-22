@@ -38,7 +38,7 @@ test_requirements = [
 
 setup(
     name='pyriv',
-    version='0.2.8',
+    version='0.2.9',
     description="pyriv calculates the distance from a given starting point to the closest coastal edge via waterways.",
     long_description=readme + '\n\n' + history,
     author="Jared Kibele",
@@ -52,7 +52,7 @@ setup(
         ]
     },
     include_package_data=True,
-    install_requires=['numpy', 'decorator','networkx'],#requirements,
+    install_requires=['numpy','networkx', 'decorator>=3.4.0'],#requirements,
     extras_require=extra_requirements,
     license="MIT license",
     zip_safe=False,

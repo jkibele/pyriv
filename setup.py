@@ -19,6 +19,15 @@ requirements = [
     'numpy',
 ]
 
+#extra requirements for optional features with their own dependencies
+#on install, include the named extras in square brackets after the project name..
+#i.e. pip install pyriv [geoFunc]
+#Note: can also specify this with entry points for dynamic loading..
+#i.e. ... ['pyriv=pyriv.cli:main [geoFunc]'], ['pyriv=pyriv.cli:other [otherExtra]'], ...
+extra_requirements = {
+    'geoFunc': ["geopandas"],
+}
+
 setup_requirements = [
     # TODO(jkibele): put setup requirements (distutils extensions, etc.) here
 ]
@@ -44,6 +53,7 @@ setup(
     },
     include_package_data=True,
     install_requires=requirements,
+    extras_require=extra_requirements,
     license="MIT license",
     zip_safe=False,
     keywords='river distance pyriv',

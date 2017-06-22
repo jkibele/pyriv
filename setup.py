@@ -38,7 +38,7 @@ test_requirements = [
 
 setup(
     name='pyriv',
-    version='0.1.0',
+    version='0.2.0',
     description="pyriv calculates the distance from a given starting point to the closest coastal edge via waterways.",
     long_description=readme + '\n\n' + history,
     author="Jared Kibele",

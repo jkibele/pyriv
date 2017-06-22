@@ -1,2 +1,8 @@
 *.egg-info
 *.egg
+bin
+dist
+downloads
+eggs
+*.pyo
+*.pyc

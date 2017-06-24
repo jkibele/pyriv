@@ -145,14 +145,19 @@ class RiverGraph(nx.DiGraph):
         else:
             return True
 
-    def deadend_nodes(self):
+    def deadends(self):
         """
-        Return a list of nodes with no successors.
+        For a directed graph, find the nodes that have in edges but no out edges.
         """
-        narr = np.array(self.nodes())
-        # make index of deadends
-        deadind = np.apply_along_axis(self.is_deadend, 1, narr)
-        return narr[deadind].tolist()
+        # get a dictionary of { node: out_degree }
+        degdict = self.out_degree(self.nodes())
+        # convert to a 2 column array of node and out_degree
+        degarr = np.array(degdict.items())
+        # get a boolean index of rows where out_degree==0
+        dead_row_ind = (degarr[:,1]==0)
+        # use that index to get the nodes
+        dead_nodes = degarr[:,0][dead_row_ind]
+        return tuple(dead_nodes)
 
     def is_coastal_node(self, node):
         """

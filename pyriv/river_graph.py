@@ -1,7 +1,8 @@
 import networkx as nx
 import numpy as np
 import json
-from shapely.geometry import LineString, point
+from shapely.geometry import LineString, point, Point
+import geopandas as gpd
 
 def point_to_tuple(g):
     """
@@ -28,12 +29,37 @@ def point_to_tuple(g):
         result = tuple(np.array(g))
     return result
 
+def get_coastline_geom(shape_fn):
+    """
+    Read a shapefile, run unary_union on the geometries and return the resulting
+    geometry. In the case of a coastline, this will be a multilinestring of the
+    coast.
+
+    Parameters
+    ----------
+      shape_fn : string
+        The filepath to a line shapefile. Coastline polygons won't work.
+
+    Returns
+    -------
+    shapely.geometry.MultiLinestring
+      Just the geometry. Ready to use for distance calculations.
+    """
+    cldf = gpd.read_file(shape_fn)
+    return cldf.unary_union
+
 class RiverGraph(nx.DiGraph):
-    def __init__(self, coastal_fcode=56600, *args, **kwargs):
+    """
+    A graph representation of a river network.
+    """
+    def __init__(self, coastline_shp=None, *args, **kwargs):
         """
         To make a RiverGraph from a graph, RiverGraph(data=graph)
         """
-        self.fcode = coastal_fcode
+        if coastline_shp:
+            self.coastline = get_coastline_geom(coastline_shp)
+        else:
+            self.coastline = None
         self = super(RiverGraph, self).__init__(*args, **kwargs)
 
     def closest_node(self, pos):
@@ -158,6 +184,16 @@ class RiverGraph(nx.DiGraph):
         # use that index to get the nodes
         dead_nodes = degarr[:,0][dead_row_ind]
         return tuple(dead_nodes)
+
+    def deadend_gdf(self, epsg=None, dist=1.5):
+        dnodes = self.deadends()
+        ddf = gpd.GeoDataFrame({'geometry': [Point(n) for n in dnodes]})
+        if epsg:
+            ddf.crs = {'init' :'epsg:{}'.format(epsg)}
+        if self.coastline:
+            ddf['is_coastal'] = ddf.distance(self.coastline) <= dist
+            ddf['end_type'] = ddf.is_coastal.map({True: 'Coastal', False: 'Inland'})
+        return ddf
 
     def is_coastal_node(self, node):
         """

@@ -5,21 +5,21 @@ from river_graph import RiverGraph
 
 class GraphBuilder(object):
 
-    def __init__(self, file_path, coastal_fcode=56600):
+    def __init__(self, file_path, coastline_shp=None):
         """
         Build a graph from a shapefile and provide methods to prune, or read
         a gpickle file and convert it to a `RiverGraph`.
         """
-        self.fcode = coastal_fcode
+        self.coast_fn = coastline_shp
         if os.path.splitext(file_path)[1] == '.shp':
             self.graph = RiverGraph(data=nx.read_shp(file_path), \
-                                    coastal_fcode=self.fcode)
+                                    coastline_shp=self.coast_fn)
         elif os.path.splitext(file_path)[1] == '.graphml':
             self.graph = RiverGraph(data=nx.read_graphml(file_path), \
-                                    coastal_fcode=self.fcode)
+                                    coastline_shp=self.coast_fn)
         else:
             self.graph = RiverGraph(data=nx.read_gpickle(file_path), \
-                                    coastal_fcode=self.fcode)
+                                    coastline_shp=self.coast_fn)
 
     def prune_network(self, verbose=False):
         """
@@ -31,14 +31,14 @@ class GraphBuilder(object):
         g_list = []
         cps = nx.weakly_connected_component_subgraphs(sg)
         for cp in cps:
-            if has_coast_node(cp.nodes(), sg, fcode=self.fcode):
+            if has_coast_node(cp.nodes(), sg):
                 g_list.append(cp)
                 coast_n += 1
             else:
                 noncoast_n += 1
         if verbose:
             print "{} graphs with coastal nodes, {} without.".format(coast_n, noncoast_n)
-        return RiverGraph(data=nx.compose_all(g_list), coastal_fcode=self.fcode)
+        return RiverGraph(data=nx.compose_all(g_list), coastline_shp=self.coast_fn)
 
     def write_gpickle(self, out_file_path):
         """
@@ -55,7 +55,7 @@ class GraphBuilder(object):
         nx.write_graphml(nxg, out_file_path)
 
 
-def has_coast_node(node_list, sg, fcode=56600):
+def has_coast_node(node_list, sg):
     """
     Given a list of nodes, return `True` if at least one node is
     coastal. Otherwise, return `False`. This is essentially the same as

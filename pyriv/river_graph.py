@@ -1,7 +1,8 @@
 import networkx as nx
 import numpy as np
 import json
-from shapely.geometry import LineString, point
+from shapely.geometry import LineString, point, Point
+import geopandas as gpd
 
 def point_to_tuple(g):
     """
@@ -28,14 +29,59 @@ def point_to_tuple(g):
         result = tuple(np.array(g))
     return result
 
+def get_coastline_geom(shape_fn):
+    """
+    Read a shapefile, run unary_union on the geometries and return the resulting
+    geometry. In the case of a coastline, this will be a multilinestring of the
+    coast.
+
+    Parameters
+    ----------
+      shape_fn : string
+        The filepath to a line shapefile. Coastline polygons won't work.
+
+    Returns
+    -------
+    shapely.geometry.MultiLinestring
+      Just the geometry. Ready to use for distance calculations.
+    """
+    cldf = gpd.read_file(shape_fn)
+    return cldf.unary_union, cldf.crs
+
 class RiverGraph(nx.DiGraph):
-    def __init__(self, coastal_fcode=56600, *args, **kwargs):
+    """
+    A graph representation of a river network.
+    """
+    def __init__(self, coastline_shp, *args, **kwargs):
         """
         To make a RiverGraph from a graph, RiverGraph(data=graph)
         """
-        self.fcode = coastal_fcode
-        self.as_super = super(RiverGraph, self)
-        self.as_super.__init__(*args, **kwargs)
+
+        #self.fcode = coastal_fcode
+        #self.as_super = super(RiverGraph, self)
+        #self.as_super.__init__(*args, **kwargs)
+
+        self.coastline, self.crs = get_coastline_geom(coastline_shp) 
+        self._river_mouths_cache = None
+        self._inland_deadends_cache = None
+        self = super(RiverGraph, self).__init__(*args, **kwargs)
+
+
+    @property
+    def river_mouths(self):
+        if not self._river_mouths_cache:
+            ddf = self.deadend_gdf()
+            self._river_mouths_cache = ddf[ddf.is_coastal].geometry.apply(lambda g: tuple(np.array(g))).tolist()
+            self._inland_deadends_cache = ddf[~ddf.is_coastal].geometry.apply(lambda g: tuple(np.array(g))).tolist()
+        return self._river_mouths_cache
+
+    @property
+    def inland_deadends(self):
+        if not self._river_mouths_cache:
+            ddf = self.deadend_gdf()
+            self._river_mouths_cache = ddf[ddf.is_coastal].geometry.apply(lambda g: tuple(np.array(g))).tolist()
+            self._inland_deadends_cache = ddf[~ddf.is_coastal].geometry.apply(lambda g: tuple(np.array(g))).tolist()
+        return self._inland_deadends_cache
 
     def closest_node(self, pos):
         """
@@ -109,7 +155,7 @@ class RiverGraph(nx.DiGraph):
             pnts.append(p)
         return np.vstack(pnts)
 
-    def shortest_full_path(self, pos0, pos1, weights='LengthKM'):
+    def shortest_full_path(self, pos0, pos1, weights='distance'):
         """
         Find the shortest full path between 2 positions. This will find
         the nodes closest to the given positions, the nodes between those
@@ -160,23 +206,42 @@ class RiverGraph(nx.DiGraph):
         dead_nodes = degarr[:,0][dead_row_ind]
         return tuple(dead_nodes)
 
-    def is_coastal_node(self, node):
+    def deadend_gdf(self, dist=1.5):
         """
-        Return `True` if the given node is coastal. We call a node coastal
-        if it is connected to an edge that has an `FCode` of 56600. According
-        to the NHDFlowline feature type list (nhd.usgs.gov), that `FCode`
-        means "coastline".
+        Create a point geodataframe of deadend nodes attributed with wheter each 
+        deadend is coastal or inland.
+
+        Parameters
+        ----------
+          dist : float
+            Threshold distance from the coast for a node to be considered coastal.
+            Distance units are the units of the geographic projection. In the case
+            of Alaska Albers the unit is meters.
+
+        Return
+        ------
+          geodataframe
+            Geodataframe of point geometry attributed with boolean `is_coastal` and
+            string `end_type` with values of 'Coastal' and 'Inland'.
+        """
+        dnodes = self.deadends()
+        ddf = gpd.GeoDataFrame({'geometry': [Point(n) for n in dnodes]})
+        if self.crs:
+            ddf.crs = self.crs
+        ddf['is_coastal'] = ddf.distance(self.coastline) <= dist
+        ddf['end_type'] = ddf.is_coastal.map({True: 'Coastal', False: 'Inland'})
+        return ddf
+
+    def is_rivermouth(self, node):
+        """
+        Return `True` if the given node is coastal.
         """
         node = tuple(node)
         # get the edges with FCodes
-        edges = self.edges(node, data='FCode')
-        # get a list of FCodes from edges connected to the node
-        fc_list = [fc for e1, e2, fc in edges]
-        if self.fcode in fc_list:
-            result = True
+        if node in self.river_mouths:
+            return True
         else:
-            result = False
-        return result
+            return False
 
     def reachable_nodes(self, start_node):
         """
@@ -196,77 +261,81 @@ class RiverGraph(nx.DiGraph):
             rns.append(start_node)
         return nx.subgraph(self, rns)
 
-    def reachable_coast_nodes(self, start_node):
+    def downstream_rivermouths(self, start_node):
         """
         Given a start_node, return only the reachable nodes that are coastal.
         """
-        rn = np.array(self.reachable_nodes(start_node))
-        return rn[np.apply_along_axis(self.is_coastal_node, 1, rn)].tolist()
+        rn = self.reachable_nodes(start_node)
+        return [n for n in rn if n in self.river_mouths]
 
-    def has_coast_node(self, node_list):
+    def has_rivermouth(self, node_list):
         """
-        Given a list of nodes, return `True` if at least one node is
-        coastal. Otherwise, return `False`.
+        Given a list of nodes, return `True` if at least one node is a river 
+        mouth. Otherwise, return `False`.
         """
-        return np.apply_along_axis(self.is_coastal_node, 1, np.array(node_list)).any()
+        return [n for n in node_list if n in self.river_mouths].any()
 
-    def only_coastal_predecessors(self, node):
-        """
-        For a given node in the RiverGraph, determine if a node has one or more
-        coastal node predecessors and no other predecessors.
-        """
-        node = tuple(node)
-        preds = self.predecessors(node)
-        if preds:
-            only_coastal = np.array([self.is_coastal_node(nd) for nd in preds]).all()
-        else:
-            only_coastal = False
-        return only_coastal
 
-    def __only_coastal_index(self, node_list):
-        """
-        Generate a boolean index for node_list that indicates whether or not each
-        node has predecessors that are exclusively coastal nodes.
-        """
-        nla = np.array(node_list)
-        ind = np.apply_along_axis(self.only_coastal_predecessors, 1, nla)
-        return ind
+    # I think I'll delete this. Just commenting out for now
+    # def only_coastal_predecessors(self, node):
+    #     """
+    #     For a given node in the RiverGraph, determine if a node has one or more
+    #     coastal node predecessors and no other predecessors.
+    #     """
+    #     node = tuple(node)
+    #     preds = self.predecessors(node)
+    #     if preds:
+    #         only_coastal = np.array([self.is_coastal_node(nd) for nd in preds]).all()
+    #     else:
+    #         only_coastal = False
+    #     return only_coastal
 
-    def redundant_coastal_nodes(self, node_list):
-        """
-        Given a list of nodes, return the subset that are only reachable from
-        other coastal nodes. When trying to find the shortest path to the
-        coast, these nodes are not of interest.
-        """
-        only_coastal_bool = self.__only_coastal_index(nla)
-        nla = np.array(node_list)
-        return nla[only_coastal_bool].tolist()
+    # def __only_coastal_index(self, node_list):
+    #     """
+    #     Generate a boolean index for node_list that indicates whether or not each
+    #     node has predecessors that are exclusively coastal nodes.
+    #     """
+    #     nla = np.array(node_list)
+    #     ind = np.apply_along_axis(self.only_coastal_predecessors, 1, nla)
+    #     return ind
 
-    def terminal_coastal_nodes(self, start_node):
-        """
-        For a given `start_node`, return a list of nodes where the downstream
-        flow meets the coastline.
-        """
-        rcns = self.reachable_coast_nodes(start_node)
-        oci = self.__only_coastal_index(rcns)
-        # Return the reachable coastal nodes that do NOT have only coastal
-        # predecessors. i.e., coastal nodes with non-coastal flow into them.
-        return np.array(rcns)[~oci].tolist()
+    # def redundant_coastal_nodes(self, node_list):
+    #     """
+    #     Given a list of nodes, return the subset that are only reachable from
+    #     other coastal nodes. When trying to find the shortest path to the
+    #     coast, these nodes are not of interest.
+    #     """
+    #     only_coastal_bool = self.__only_coastal_index(nla)
+    #     nla = np.array(node_list)
+    #     return nla[only_coastal_bool].tolist()
 
-    def paths_to_coast(self, start_node, weights='LengthKM'):
+    # def terminal_coastal_nodes(self, start_node):
+    #     """
+    #     For a given `start_node`, return a list of nodes where the downstream
+    #     flow meets the coastline.
+    #     """
+    #     rcns = self.reachable_coast_nodes(start_node)
+    #     oci = self.__only_coastal_index(rcns)
+    #     # Return the reachable coastal nodes that do NOT have only coastal
+    #     # predecessors. i.e., coastal nodes with non-coastal flow into them.
+    #     return np.array(rcns)[~oci].tolist()
+
+    def paths_to_coast(self, start_node, weights='distance'):
         """
         Return a list of LineStrings that represent the shortest respective
         paths to reachable `terminal_coastal_nodes`.
         """
         path_list = []
         # this makes it much faster
-        subg = self.reachable_subgraph(start_node)
-        for tcn in subg.terminal_coastal_nodes(start_node):
-            sfp = subg.shortest_full_path(start_node, tcn, weights=weights)
+        # subg = self.reachable_subgraph(start_node)
+        # actually, no. I don't think that makes it faster
+        # ...and it doesn't work with reclass of DiGraph
+        for tcn in self.downstream_rivermouths(start_node):
+            sfp = self.shortest_full_path(start_node, tcn, weights=weights)
             path_list.append(sfp)
         return path_list
 
-    def shortest_path_to_coast(self, start_node, weights='LengthKM'):
+    def shortest_path_to_coast(self, start_node, weights='distance'):
         """
         Return the list of nodes that constitutes the shortest path to the coast.
         """
@@ -279,7 +348,8 @@ class RiverGraph(nx.DiGraph):
             ddict[lnst.length] = lnst
         # handle the case where there's no path
         if not ddict:
-            result = None
+            # Return an empty LineString. Length will be 0
+            result = LineString()
         else:
             result = ddict[min(ddict.keys())]
         return result

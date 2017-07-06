@@ -1,3 +1,6 @@
 /pyriv.rst
 /pyriv.*.rst
 /modules.rst
+_build
+_static
+_templates

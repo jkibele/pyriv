@@ -61,9 +61,7 @@ class RiverGraph(nx.DiGraph):
         #self.as_super = super(RiverGraph, self)
         #self.as_super.__init__(*args, **kwargs)
 
-        self.coastline, self.crs = get_coastline_geom(coastline_shp) 
-        self._river_mouths_cache = None
-        self._inland_deadends_cache = None
+      
         self = super(RiverGraph, self).__init__(*args, **kwargs)
 
 

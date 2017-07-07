@@ -26,6 +26,8 @@ class GraphBuilder(object):
         """
         Remove subgraphs of the network that do not connect to the coastline.
         """
+        # weakly_connected_component_subgraphs doesn't work with the 
+        # RiverGraph subclass, so we have to switch it back to DiGraph
         sg = self.graph
         coast_n = 0
         noncoast_n = 0

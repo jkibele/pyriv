@@ -45,14 +45,17 @@ def get_coastline_geom(shape_fn):
     shapely.geometry.MultiLinestring
       Just the geometry. Ready to use for distance calculations.
     """
-    cldf = gpd.read_file(shape_fn)
-    return cldf.unary_union, cldf.crs
+    if shape_fn:
+        cldf = gpd.read_file(shape_fn)
+        return cldf.unary_union, cldf.crs
+    else:
+        return None, None
 
 class RiverGraph(nx.DiGraph):
     """
     A graph representation of a river network.
     """
-    def __init__(self, coastline_shp, *args, **kwargs):
+    def __init__(self, coastline_shp=None, *args, **kwargs):
         """
         To make a RiverGraph from a graph, RiverGraph(data=graph)
         """

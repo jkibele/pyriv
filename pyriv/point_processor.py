@@ -22,3 +22,11 @@ def river_distances(shp_file, riv_graph, node_distance=False):
 		dser = pd.Series(d, name='node_dist')
 		pnts = pnts.join(dser)
 	return pnts
+
+def save_points(riv_dist_gdf, outfile):
+	riv_dist_gdf.drop(['path'], axis=1).to_file(outfile)
+
+def save_paths(riv_dist_gdf, outfile):
+	outgdf = riv_dist_gdf.set_geometry('path', drop=True)
+	zero_ind = outdf.index[outdf.riv_dist_km==0.0]
+	outdf.drop(zero_ind).to_file(outfile)

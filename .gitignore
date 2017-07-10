@@ -7,3 +7,4 @@ eggs
 *.pyo
 *.pyc
 lib
+notebooks/*.gpickle

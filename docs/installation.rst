@@ -3,7 +3,7 @@
 ============
 Installation
 ============
-
+** Note: Python 2.6 is not supported due to a bug in 2.6 that prevents the use of partials. In the future, the reliance on partials for parallelization should be replaced with a wrapper function or something of the sort.**
 
 Stable release
 --------------

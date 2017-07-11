@@ -27,8 +27,21 @@ pyriv calculates the distance from a given starting point to the closest coastal
 
 Features
 --------
+* River mouth matrix distance calculation
 
-* TODO
+Tests
+--------
+* 
+
+Setup
+--------
+* When ``setup.py`` is complete, re-generate requirements.txt
+** Remember: "``setup.py`` should declare the loosest possible dependency versions that are still workable. Its job is to say what a particular package can work with."
+** "``requirements.txt`` is a deployment manifest that defines an entire installation job, and shouldn't be thought of as tied to any one package. Its job is to declare an exhaustive list of all the necessary packages to make a deployment work.""
+
+Documentation
+-------
+* Add readthedocs webhook to git project
 
 Credits
 ---------

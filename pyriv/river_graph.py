@@ -42,8 +42,8 @@ def get_coastline_geom(shape_fn):
 
     Returns
     -------
-    shapely.geometry.MultiLinestring
-      Just the geometry. Ready to use for distance calculations.
+      shapely.geometry.MultiLinestring
+        Just the geometry. Ready to use for distance calculations.
     """
     cldf = gpd.read_file(shape_fn)
     return cldf.unary_union, cldf.crs

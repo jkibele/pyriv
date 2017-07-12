@@ -59,6 +59,7 @@ class RiverGraph(nx.DiGraph):
         """
         To make a RiverGraph from a graph, RiverGraph(data=graph)
         """
+
         self.coastline, self.crs = get_coastline_geom(coastline_shp) 
         self._river_mouths_cache = None
         self._inland_deadends_cache = None

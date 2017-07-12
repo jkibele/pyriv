@@ -1,2 +1,8 @@
-*.rst
 dist/
+*.egg-info
+*.egg
+bin
+downloads
+eggs
+*.pyo
+*.pyc

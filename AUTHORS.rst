@@ -5,9 +5,9 @@ Credits
 Development Lead
 ----------------
 
-* Haleigh Wright <wright@umail.ucsb.edu>
+* Jared Kibele <jkibele@nceas.ucsb.edu>
 
 Contributors
 ------------
 
-None yet. Why not be the first?
+* Haleigh Wright <wright@umail.ucsb.edu>

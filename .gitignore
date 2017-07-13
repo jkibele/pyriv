@@ -8,4 +8,4 @@ eggs
 *.pyc
 lib
 notebooks/*.gpickle
-
+.DS_Store

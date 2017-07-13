@@ -42,7 +42,7 @@ setup(
     description="pyriv calculates the distance from a given starting point to the closest coastal edge via waterways.",
     long_description=readme + '\n\n' + history,
     author="Jared Kibele",
-    author_email='jkibele@ucsb.edu',
+    author_email='jkibele@nceas.ucsb.edu',
     url='https://github.com/jkibele/pyriv',
     download_url='https://github.com/jkibele/pyriv/archive/0.1.tar.gz',
     packages=find_packages(include=['pyriv'], exclude=['docs']),

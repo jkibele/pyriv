@@ -4,6 +4,7 @@ from shapely.ops import polygonize
 from shapely.geometry import MultiPolygon, LineString, Point
 from pyriv.units import length_in_display_units
 from multiprocessing import Pool
+from functools import partial
 
 #%% For testing
 coastfn = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/CoastLine.shp'
@@ -65,6 +66,19 @@ def graph_from_coast(coast):
     if coast.__class__.__name__ != 'GeoDataFrame':
         coast = gpd.read_file(coast)
 
+def ocean_edges_for_node(node, land_obj, node_list):
+    """
+    multiprocessing can't work with functions that are not a top level, so I'm
+    moving this out here to see if I can make it work.
+    """
+    ocean_edges = tuple()
+    for n in node_list:
+        if node <> n:
+            line = LineString((node,n))
+            if not land_obj.line_crosses(line):
+                ocean_edges += ((node, n, {'distance': length_in_display_units(line.length)}),)
+                print '.',
+    return ocean_edges
 
 
 #%% Land Obj
@@ -108,7 +122,7 @@ class Land(object):
                     print '.',
         return ocean_edges
     
-    def _add_ocean_edges_complete(self, graph, verbose=False):
+    def _add_ocean_edges_complete(self, graph, n_jobs=6, verbose=False):
         if verbose:
             cnt = 1
             import time
@@ -117,9 +131,10 @@ class Land(object):
             edge_possibilities = graph.number_of_nodes() * (graph.number_of_nodes() -1)
             print "We'll have to look at somewhere around %i edge possibilities." % ( edge_possibilities )
             print "Node: ",
-        pool = Pool()
-        o_eds = lambda n: self._ocean_edges_for_node(graph, n)
-        ocean_edges = pool.map(o_eds, graph.nodes_iter())
+        oe_node = partial(ocean_edges_for_node, land_obj=self, node_list=graph.nodes())
+        pool = Pool(processes=n_jobs)
+#        o_eds = lambda n: ocean_edges_for_node(self, graph, n)
+        ocean_edges = pool.map(oe_node, graph.nodes_iter())
         
 #        ocean_edges = tuple()
 #        for node in graph.nodes_iter():

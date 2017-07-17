@@ -2,7 +2,7 @@ import networkx as nx
 import geopandas as gpd
 from shapely.ops import polygonize
 from shapely.geometry import MultiPolygon, LineString, Point
-from pyriv.units import length_in_display_units
+from units import length_in_display_units
 from multiprocessing import Pool
 from functools import partial
 

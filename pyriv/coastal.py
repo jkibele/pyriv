@@ -10,6 +10,8 @@ from functools import partial
 coastfn = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/CoastLine.shp'
 rivfn = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/Rivers.shp'
 testlinefn = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/test_lines.shp'
+#coastfn = '/home/jkibele/sasap-size-declines/RiverDistance/data/test_data/CoastLine.shp'
+#rivfn = '/home/jkibele/sasap-size-declines/RiverDistance/data/test_data/Rivers.shp'
 
 #%% Make land polygon from coastline. Coasline is actually many linestrings.
 def polygonize_coastline(coast):

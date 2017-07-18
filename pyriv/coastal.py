@@ -5,6 +5,7 @@ from shapely.geometry import MultiPolygon, LineString, Point
 from units import length_in_display_units
 from multiprocessing import Pool
 from functools import partial
+from itertools import chain
 
 #%% For testing
 #coastfn = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/CoastLine.shp'
@@ -135,16 +136,10 @@ class Land(object):
             print "Node: ",
         oe_node = partial(ocean_edges_for_node, land_obj=self, node_list=graph.nodes())
         pool = Pool(processes=n_jobs)
-#        o_eds = lambda n: ocean_edges_for_node(self, graph, n)
         ocean_edges = pool.map(oe_node, graph.nodes_iter())
-        
-#        ocean_edges = tuple()
-#        for node in graph.nodes_iter():
-#            if verbose:
-#                print str(cnt) + ' ',
-#                cnt += 1
-#            ocean_edges += self._ocean_edges_for_node(graph, node)
-        
+        # map returns a list of tuples (one for all the edges of each node). We
+        # need that flattened into a single iterable of all the edges.
+        ocean_edges = chain.from_iterable(ocean_edges)
         graph.add_edges_from(ocean_edges)
         if verbose:
             print "It took %i minutes to load %i edges." % ((time.time() - t0)/60, graph.number_of_edges() )

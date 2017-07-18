@@ -115,15 +115,15 @@ class Land(object):
         """
         return line.intersects(self.land_shrunk)
     
-    def _ocean_edges_for_node(self, graph, node):
-        ocean_edges = tuple()
-        for n in graph.nodes_iter():
-            if node <> n:
-                line = LineString((node,n))
-                if not self.line_crosses(line):
-                    ocean_edges += ((node, n, {'distance': length_in_display_units(line.length)}),)
-                    print '.',
-        return ocean_edges
+#    def _ocean_edges_for_node(self, graph, node):
+#        ocean_edges = tuple()
+#        for n in graph.nodes_iter():
+#            if node <> n:
+#                line = LineString((node,n))
+#                if not self.line_crosses(line):
+#                    ocean_edges += ((node, n, {'distance': length_in_display_units(line.length)}),)
+#                    print '.',
+#        return ocean_edges
     
     def _add_ocean_edges_complete(self, graph, n_jobs=6, verbose=False):
         if verbose:

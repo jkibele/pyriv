@@ -8,11 +8,11 @@ from functools import partial
 from itertools import chain
 
 #%% For testing
-coastfn = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/CoastLine.shp'
-rivfn = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/Rivers.shp'
-testlinefn = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/test_lines.shp'
-#coastfn = '/home/jkibele/sasap-size-declines/RiverDistance/data/test_data/CoastLine.shp'
-#rivfn = '/home/jkibele/sasap-size-declines/RiverDistance/data/test_data/Rivers.shp'
+#coastfn = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/CoastLine.shp'
+#rivfn = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/Rivers.shp'
+#testlinefn = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/test_lines.shp'
+coastfn = '/home/jkibele/sasap-size-declines/RiverDistance/data/test_data/CoastLine.shp'
+rivfn = '/home/jkibele/sasap-size-declines/RiverDistance/data/test_data/Rivers.shp'
 
 #%% Make land polygon from coastline. Coasline is actually many linestrings.
 def polygonize_coastline(coast):
@@ -22,8 +22,8 @@ def polygonize_coastline(coast):
     """
     if coast.__class__.__name__ != 'GeoDataFrame':
         coast = gpd.read_file(coast)
-        
-    return MultiPolygon(polygonize(coast.geometry))
+    plist = [p for p in polygonize(coast.geometry)]
+    return MultiPolygon(plist)
 
 def coords_from_coastline(coast):
     """Extract coordinates from a coastline shapefile or geodataframe.
@@ -97,10 +97,10 @@ class Land(object):
         self.coords = coords_from_coastline(self.gdf)
         self.cached_graph = None
         
-    def graph(self, dump_cached=False):
+    def graph(self, dump_cached=False, n_jobs=6):
         if dump_cached or not self.cached_graph:
             G = self.fresh_graph()
-            G = self._add_ocean_edges_complete(G, verbose=True)
+            G = self._add_ocean_edges_complete(G, verbose=True, n_jobs=n_jobs)
             self.cached_graph = G
         return self.cached_graph
     

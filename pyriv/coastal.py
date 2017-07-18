@@ -97,10 +97,10 @@ class Land(object):
         self.coords = coords_from_coastline(self.gdf)
         self.cached_graph = None
         
-    def graph(self, dump_cached=False):
+    def graph(self, dump_cached=False, n_jobs=6):
         if dump_cached or not self.cached_graph:
             G = self.fresh_graph()
-            G = self._add_ocean_edges_complete(G, verbose=True)
+            G = self._add_ocean_edges_complete(G, verbose=True, n_jobs=n_jobs)
             self.cached_graph = G
         return self.cached_graph
     

@@ -42,7 +42,7 @@ Setup
 
 Documentation
 -------
-* Add readthedocs webhook to git project
+* *fix* readthedocs webhook to git project
 
 Credits
 ---------

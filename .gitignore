@@ -1,7 +1,5 @@
-*.ipynb_checkpoints/*.ipynb
-*.ipynb_checkpoints/
-*/*.ipynb_checkpoints/*
-*.ipynb_checkpoints
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
 dist/
 *.egg-info
 *.egg

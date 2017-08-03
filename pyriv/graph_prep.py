@@ -14,9 +14,6 @@ class GraphBuilder(object):
             self.coast_fn = coastline_shp
             if os.path.splitext(file_path)[1] == '.shp':
                 g = nx.read_shp(file_path)
-                print(g)
-                print type(g)
-                print(g.edges())
             elif os.path.splitext(file_path)[1] == '.graphml':
                 g = nx.read_graphml(file_path)
             elif os.path.splitext(file_path)[1] == '.gpickle':
@@ -29,13 +26,11 @@ class GraphBuilder(object):
             if calc_dist_weights:
                 print "Weighting Edges with Distances"
                 self.graph = self.graph.weight_edges()
-            #return True
         else:
             if os.path.exists(file_path) == False:
                 print "file does not exist"
             if os.path.isfile(file_path) == False:
                 print "path is not a file or does not exist: %s" % file_path
-            #return False
         
 
     def prune_network(self, verbose=False):

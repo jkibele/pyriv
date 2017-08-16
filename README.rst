@@ -23,6 +23,12 @@ pyriv calculates the distance from a given starting point to the closest coastal
 
 * Free software: MIT license
 * Documentation: https://pyriv.readthedocs.io.
+Running Tests
+--------
+Run directly from the tests directory (this runs all tests)::
+	$ python -m unittest discover
+
+
 Note
 --------
 Important: Continuously merge (1) master --> test (2) test --> master

@@ -98,9 +98,9 @@ class TestPyriv(unittest.TestCase):
 ####### --------------------                    -----------------------------
     
     #incoming command; test "(direct) public side effects"
-    @mock.patch('pyriv.snapping_processor.nx.copy', autospec=True)
-    @mock.path('pyriv.snapping_processor.missing_edges_list', autospec=True)
-    @mock.path('pyriv.snapping_processor.add_missing_edges', autospec=True)
-    def test_network_snapping_tool(self, mock_nx_copy, ):
-
+    #@mock.patch('pyriv.snapping_processor.nx.copy', autospec=True)
+    #@mock.path('pyriv.snapping_processor.missing_edges_list', autospec=True)
+    #@mock.path('pyriv.snapping_processor.add_missing_edges', autospec=True)
+    #def test_network_snapping_tool(self, mock_nx_copy, ):
+    #    pass
 

@@ -54,13 +54,16 @@ class TestPyriv(unittest.TestCase):
     #     help_result = runner.invoke(cli.main, ['--help'])
     #     assert help_result.exit_code == 0
     #     assert '--help  Show this message and exit.' in help_result.output
-    
+
+####### --------------------                    -----------------------------    
+####### -------------------- GRAPHBUILDER TESTS -----------------------------    
+####### --------------------                    -----------------------------    
 
     # NOTE:   it may be (probably) the case that breaking the read-in process
     #         into multiple tests is redundant; consequence of being new to this
 
+    @mock.patch('pyriv.river_graph.nx.DiGraph', autospec=True) #potentially move to setup (?)
     @mock.patch('pyriv.graph_prep.nx.read_shp', autospec=True)
-    @mock.patch('pyriv.river_graph.nx.DiGraph', autospec=True) #potentially move to setup
     def test_create_graph_from_shp(self, mock_nx_read_shp, mock_river_graph_init):
         """Test if a networkx graph can be created from shp."""
         mock_nx_read_shp.return_value = self.testgraph 
@@ -70,8 +73,8 @@ class TestPyriv(unittest.TestCase):
         assert_list_equal(success.edges(), self.testgraph.edges())
 
     #   Note: this test will fail. See Issue #9
-    # @mock.patch('pyriv.graph_prep.nx.read_graphml', autospec=True)
     # @mock.patch('pyriv.river_graph.nx.DiGraph', autospec=True)
+    # @mock.patch('pyriv.graph_prep.nx.read_graphml', autospec=True)
     # def test_create_graph_from_graphml(self, mock_nx_read_graphml, mock_river_graph_init):
     #     """Test if a networkx graph can be created from graphml."""
     #     mock_nx_read_graphml.return_value = self.testgraph
@@ -87,12 +90,17 @@ class TestPyriv(unittest.TestCase):
         """Test graph saving to gpickle functionality."""
 
         mock_nx_digraph.return_value = self.testgraph
-
-
-
-
         pass
 
 
+####### --------------------                    -----------------------------    
+####### --------------------   SNAPTOOL TESTS   -----------------------------    
+####### --------------------                    -----------------------------
+    
+    #incoming command; test "(direct) public side effects"
+    @mock.patch('pyriv.snapping_processor.nx.copy', autospec=True)
+    @mock.path('pyriv.snapping_processor.missing_edges_list', autospec=True)
+    @mock.path('pyriv.snapping_processor.add_missing_edges', autospec=True)
+    def test_network_snapping_tool(self, mock_nx_copy, ):
 
 

@@ -81,37 +81,6 @@ def add_node_ids_mutate(G):
 	nx.set_node_attributes(G, 'ID', attr_dict)
 	return G
 
-def deadends_old(G):
-	"""
-	Parameters
-	----------
-
-	Returns
-	-------
-
-	For a directed graph, find the nodes that have out_degree == 0
-	Note: this is the older, slower method
-	"""
-
-	assert isinstance(G, nx.DiGraph) is True, "graph is not a digraph"
-
-	thedict = {}
-	# get a dictionary of { node: out_degree }
-	degdict = G.out_degree(G.nodes())
-	# convert to a 2 column array of node and out_degree
-	degarr = np.array(degdict.items())
-	# get a boolean index of rows where out_degree==0
-	dead_row_ind = (degarr[:,1]==0)
-
-	
-	for i in range(0, len(degarr)):
-		if dead_row_ind[i] == True:
-			thedict[allnodes[i][0]] = tuple(degarr[:,0][i])
-			
-	# use that index to get the nodes
-	#dead_nodes = degarr[:,0][dead_row_ind]
-	return thedict
-
 
 def deadend_coords_to_keys(G, ends):
 	"""
@@ -255,7 +224,7 @@ def missing_edges_to_shp(pts, filepath, projection_code):
 	"""
 	pts = list(pts.values())
 	kcdf = gpd.GeoDataFrame({'geometry': [Point(n) for n in pts]})
-	kcdf.crs = {'init': projection_code}
+	kcdf.crs = {'init': projection_code} #AA == 'epsg:3338'
 	kcdf.to_file(filepath)
 
 
@@ -263,6 +232,7 @@ def missing_edges_list(graph_to_snap, dist_thresh, outfile):
 	"""
 	Parameters
 	----------
+	  * see snap_graph method
 
 	Returns
 	-------
@@ -280,7 +250,8 @@ def missing_edges_list(graph_to_snap, dist_thresh, outfile):
 	missing_edges = find_missing_edges_par(ends_list, allnodesdict, dist_thresh, num_proc)
 	return (allnodesdict, missing_edges)
 
-def snap_graph(graph_to_snap, dist_thresh, outfile):
+
+def snapped_graph(graph_to_snap, dist_thresh, outfile):
 	"""
 	Parameters
 	----------
@@ -296,13 +267,17 @@ def snap_graph(graph_to_snap, dist_thresh, outfile):
 	    copy of graph_to_snap, with gaps <= dist_thresh snapped
 	"""
 
-	assert type(dist_thresh) is FloatType, "dist_thresh is not a float/cannot be widened into a float"
-	assert type(outfile) is StringType, "outfile is not a string"
-	
-	graph_copy = graph_to_snap.copy()
-	allnodes_missingedges = missing_edges_list(graph_to_snap, dist_thresh, outfile)
-	add_missing_edges(graph_copy, allnodes_missingedges[1], allnodes_missingedges[0])
-	return graph_copy
+	try:
+		graph_copy = graph_to_snap.copy()
+		allnodes_missingedges = missing_edges_list(graph_to_snap, dist_thresh, outfile)
+		add_missing_edges(graph_copy, allnodes_missingedges[1], allnodes_missingedges[0])
+		return graph_copy
+	except TypeError, AttributeError:
+		if not isinstance(dist_thresh, Float):
+			print "dist_thresh is not a float/cannot be widened into a float"
+		if not isinstance(outfile, String):
+			print "outfile name is not a string"
+
 
 ############## ---- STAT METHODS -----------------
 
@@ -379,6 +354,39 @@ def find_missing_edges_seq(G, ends, allnodes, threshold):
 				problem_points[str(cnt)+"_B"] =key2
 				break
 
+def deadends_old(G):
+	"""
+	Parameters
+	----------
+
+	Returns
+	-------
+
+	For a directed graph, find the nodes that have out_degree == 0
+	Note: this is the older, slower method
+	"""
+
+	assert isinstance(G, nx.DiGraph) is True, "graph is not a digraph"
+
+	thedict = {}
+	# get a dictionary of { node: out_degree }
+	degdict = G.out_degree(G.nodes())
+	# convert to a 2 column array of node and out_degree
+	degarr = np.array(degdict.items())
+	# get a boolean index of rows where out_degree==0
+	dead_row_ind = (degarr[:,1]==0)
+
+	
+	for i in range(0, len(degarr)):
+		if dead_row_ind[i] == True:
+			thedict[allnodes[i][0]] = tuple(degarr[:,0][i])
+			
+	# use that index to get the nodes
+	#dead_nodes = degarr[:,0][dead_row_ind]
+	return thedict
+
+############## ---- CLASS DEFINITION -----------------
+############## ---- CLASS DEFINITION -----------------
 
 class SnapTool(object):
     """

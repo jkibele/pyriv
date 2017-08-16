@@ -5,10 +5,13 @@ import networkx as nx
 import numpy as np
 import sys
 import geopandas as gpd
+import seaborn # makes matplotlib graphs look prettier
 from shapely.geometry import Point
 from multiprocessing import Pool
 
 from pyriv import graph_prep as GraphBuilder
 from pyriv import river_graph as RiverGraph
+from pyriv import snapping_processor as SnapTool
 
 %matplotlib inline
+%config InlineBackend.figure_format = 'retina' # makes matplotlib graphs 2x resolution for retina display

@@ -65,6 +65,11 @@ class RiverGraph(nx.DiGraph):
         self.coastline, self.crs = get_coastline_geom(coastline_shp) 
         self._river_mouths_cache = None
         self._inland_deadends_cache = None
+        #print kwargs['data']
+        #print "BLAHHNSIPUJQO"
+        #self = super.DiGraph = kwargs['data']
+        # --->>>>>>>> this line causes the graph to be generated twice!!!
+        #               b/c of how nx works  
         self = super(RiverGraph, self).__init__(*args, **kwargs)
 
     @property

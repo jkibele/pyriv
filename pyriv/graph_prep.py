@@ -1,3 +1,4 @@
+import errno
 import os
 import numpy as np
 import networkx as nx
@@ -10,17 +11,28 @@ class GraphBuilder(object):
         Build a graph from a shapefile and provide methods to prune, or read
         a gpickle file and convert it to a `RiverGraph`.
         """
-        self.coast_fn = coastline_shp
-        if os.path.splitext(file_path)[1] == '.shp':
-            g = nx.read_shp(file_path)
-        elif os.path.splitext(file_path)[1] == '.graphml':
-            g = nx.read_graphml(file_path)
+        if os.path.exists(file_path) == True and os.path.isfile(file_path) == True:
+            self.coast_fn = coastline_shp
+            if os.path.splitext(file_path)[1] == '.shp':
+                g = nx.read_shp(file_path)
+            elif os.path.splitext(file_path)[1] == '.graphml':
+                g = nx.read_graphml(file_path)
+            elif os.path.splitext(file_path)[1] == '.gpickle':
+                g = nx.read_gpickle(file_path)
+            else:
+                #assert False, "path does not have a valid extention (.shp, .graphml, .gpickle): %s" % file_path
+                print "path does not have a valid extension (.shp, .graphml, .gpickle)"
+
+            self.graph = RiverGraph(data=g, coastline_shp=self.coast_fn)
+            if calc_dist_weights:
+                print "Weighting Edges with Distances"
+                self.graph = self.graph.weight_edges()
         else:
-            g = nx.read_gpickle(file_path)
-        self.graph = RiverGraph(data=g, coastline_shp=self.coast_fn)
-        if calc_dist_weights:
-            print "Weighting Edges with Distances"
-            self.graph = self.graph.weight_edges()
+            if os.path.exists(file_path) == False:
+                print "file does not exist"
+            if os.path.isfile(file_path) == False:
+                print "path is not a file or does not exist: %s" % file_path
+        
 
     def prune_network(self, verbose=False):
         """
@@ -58,6 +70,68 @@ class GraphBuilder(object):
         nx.write_graphml(nxg, out_file_path)
 
 
+    # def splitpath(self, filename):
+    #     """
+    #     Splits full path into path and filename, respectively.
+    #     """
+    #     base = os.path.basename(filename)
+    #     tmp = filename.split(base)
+    #     return (tmp[0], base)
+
+    # def validate_file(self, filepath, mode='read'):
+    #     """
+    #     This method checks the validity of a file path & name
+    #     """
+    #     retval=()
+    #     stop = True
+    #     while(stop):
+    #         patharr = self.splitpath(filepath)
+    #         if mode == 'read':
+    #             if os.path.exists(filepath) == True and os.path.isfile(filepath) == True:
+    #                 retval = retval + (patharr[0], patharr[1])
+    #                 stop = False
+    #             else:
+    #                 filepath = raw_input("You entered and invalid filename. Please try again:") #either not a file or does not exist in that directory
+    #         elif mode == 'write':
+    #             if os.path.exists(filepath) == False:
+    #                 retval = retval + (patharr[0], patharr[1])
+    #                 stop = False
+    #             else:
+    #                 filepath = raw_input("That filename already exists. Please try again:")
+    #     return retval
+
+    # def write_shp(self, out_file_path):
+    #     """
+    #     This writes the DiGraph to GIS .shp project files.
+
+    #     Note 1: You will need to set the CRS manually in a GIS program;
+    #             that is not in this code as the processing can be too costly. 
+    #     Note 2: Will only create one level of non-existent directories, else an OSError.
+
+    #     """
+    #     #arr = self.splitpath(out_file_path)
+    #     #tmpstr = arr[0] + os.path.splitext(arr[1])[0]
+    #     #os.mkdir(tmpstr)
+    #     (path, filename) = self.validate_file(out_file_path, mode='write')
+    #     splitname = os.path.splitext(filename)
+
+    #     #create a directory with that path to avoid overwriting edges.shp
+    #     #when writing multiple networks out to the same directory
+    #     try:
+    #         os.mkdir(path + splitname[0])
+    #         print "made directory"
+    #     except OSError as exc:
+    #         if exc.errno != errno.EEXIST:
+    #             raise
+    #         pass
+
+    #     fullpath = path + splitname[0] + '/' + filename
+    #     nx.write_shp(self.graph, fullpath)
+
+#################################################################
+#### CLASS METHODS #############################################
+#################################################################
+
 def has_rivermouth(node_list, sg):
     """
     Given a list of nodes, return `True` if at least one node is
@@ -66,3 +140,68 @@ def has_rivermouth(node_list, sg):
     from having to convert subgraphs to RiverGraphs when I prune the network.
     """
     return np.apply_along_axis(sg.is_rivermouth, 1, np.array(node_list)).any()
+
+def splitpath(filename):
+    """
+    Splits full path into path and filename, respectively.
+    """
+    base = os.path.basename(filename)
+    tmp = filename.split(base)
+    return (tmp[0], base)
+
+def validate_file(filepath, mode='read'):
+    """
+    This method checks the validity of a file path & name
+    """
+    retval=()
+    stop = True
+    while(stop):
+        patharr = splitpath(filepath)
+        if mode == 'read':
+            if os.path.exists(filepath) == True and os.path.isfile(filepath) == True:
+                retval = retval + (patharr[0], patharr[1])
+                stop = False
+            else:
+                filepath = raw_input("You entered and invalid filename. Please try again:") #either not a file or does not exist in that directory
+        elif mode == 'write':
+            if os.path.exists(filepath) == False:
+                retval = retval + (patharr[0], patharr[1])
+                stop = False
+            else:
+                filepath = raw_input("That filename already exists. Please try again:")
+    return retval
+
+def write_shp(g, out_file_path):
+    """
+    This writes the DiGraph to GIS .shp project files.
+
+    Note 1: You will need to set the CRS manually in a GIS program;
+            that is not in this code as the processing can be too costly. 
+    Note 2: Will only create one level of non-existent directories, else an OSError.
+
+    """
+    #arr = self.splitpath(out_file_path)
+    #tmpstr = arr[0] + os.path.splitext(arr[1])[0]
+    #os.mkdir(tmpstr)
+    (path, filename) = validate_file(out_file_path, mode='write')
+    splitname = os.path.splitext(filename)
+
+    #create a directory with that path to avoid overwriting edges.shp
+    #when writing multiple networks out to the same directory
+    try:
+        os.mkdir(path + splitname[0])
+        print "made directory"
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
+            raise
+        pass
+
+    path_nofname = path + splitname[0]
+    fullpath = path + splitname[0] + '/' + filename
+    nx.write_shp(g, fullpath)
+
+    # rename edge files for clarity
+    for filename in os.listdir(path_nofname):
+        if filename.startswith("edges"):
+            os.rename(path_nofname+'/'+filename, path_nofname+'/'+splitname[0]+'_'+filename)
+

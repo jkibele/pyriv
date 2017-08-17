@@ -1,5 +1,5 @@
 =====
-pyriv
+pyriv - TEST BRANCH
 =====
 
 
@@ -23,26 +23,15 @@ pyriv calculates the distance from a given starting point to the closest coastal
 
 * Free software: MIT license
 * Documentation: https://pyriv.readthedocs.io.
-
-
-Features
+Running Tests
 --------
-* River mouth matrix distance calculation
+Run directly from the tests directory (this runs all tests)::
+	$ python -m unittest discover
 
-Tests
+
+Note
 --------
-* 
-
-Setup
---------
-* When ``setup.py`` is complete, re-generate requirements.txt
-
-	* Remember: "``setup.py`` should declare the loosest possible dependency versions that are still workable. Its job is to say what a particular package can work with."
-	* "``requirements.txt`` is a deployment manifest that defines an entire installation job, and shouldn't be thought of as tied to any one package. Its job is to declare an exhaustive list of all the necessary packages to make a deployment work.""
-
-Documentation
--------
-* *fix* readthedocs webhook to git project
+Important: Continuously merge (1) master --> test (2) test --> master
 
 Credits
 ---------
@@ -51,4 +40,3 @@ This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypack
 
 .. _Cookiecutter: https://github.com/audreyr/cookiecutter
 .. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
-

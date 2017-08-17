@@ -196,6 +196,12 @@ def write_shp(g, out_file_path):
             raise
         pass
 
+    path_nofname = path + splitname[0]
     fullpath = path + splitname[0] + '/' + filename
     nx.write_shp(g, fullpath)
+
+    # rename edge files for clarity
+    for filename in os.listdir(path_nofname):
+        if filename.startswith("edges"):
+            os.rename(path_nofname+'/'+filename, path_nofname+'/'+splitname[0]+'_'+filename)
 

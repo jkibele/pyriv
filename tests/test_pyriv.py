@@ -65,7 +65,7 @@ class TestPyriv(unittest.TestCase):
     @mock.patch('pyriv.river_graph.nx.DiGraph', autospec=True) #potentially move to setup (?)
     @mock.patch('pyriv.graph_prep.nx.read_shp', autospec=True)
     def test_create_graph_from_shp(self, mock_nx_read_shp, mock_river_graph_init):
-        """Test if a networkx graph can be created from shp."""
+        """Test if a river graph can be created from shp."""
         mock_nx_read_shp.return_value = self.testgraph 
         mock_river_graph_init.return_value = self.testgraph
       
@@ -83,13 +83,29 @@ class TestPyriv(unittest.TestCase):
     #     success = GraphBuilder.GraphBuilder(self.datapath+'test.graphml').graph
     #     assert_list_equal(sucess.edges(), self.testgraph.edges())
 
+    @mock.patch('pyriv.river_graph.nx.DiGraph', autospec=True) #potentially move to setup (?)
+    @mock.patch('pyriv.graph_prep.nx.read_gpickle', autospec=True)
+    def test_create_graph_from_gpickle(self, mock_nx_read_gpickle, mock_river_graph_init):
+        """Test if a river graph can be created from a .gpickle"""
+        
+        mock_nx_read_gpickle.return_value = self.testgraph
+        mock_river_graph_init.return_value = self.testgraph
+        success = GraphBuilder.GraphBuilder(self.datapath+'test.gpickle').graph
+        assert_list_equal(success.edges(), self.testgraph.edges())
+
+
+
     #outgoing command; test "expect to send"
     @mock.patch('pyriv.graph_prep.nx.write_gpickle', autospec=True)
     @mock.patch('pyriv.graph_prep.nx.DiGraph', autospec=True)
-    def test_graph_saving_gpickle(self, mock_nx_digraph, mock_nx_write_gpickle):
+    def test_writing_graph_gpickle(self, mock_nx_digraph, mock_nx_write_gpickle):
         """Test graph saving to gpickle functionality."""
 
         mock_nx_digraph.return_value = self.testgraph
+
+        pass
+
+    def test_writing_graph_shapefile(self):
         pass
 
 

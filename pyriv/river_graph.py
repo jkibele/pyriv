@@ -70,7 +70,11 @@ class RiverGraph(nx.DiGraph):
         #self = super.DiGraph = kwargs['data']
         # --->>>>>>>> this line causes the graph to be generated twice!!!
         #               b/c of how nx works  
+
+        #print "pooppoop1"
         self = super(RiverGraph, self).__init__(*args, **kwargs)
+        #print "pooppoop"
+        #print type(self.graph)
 
     @property
     def river_mouths(self):

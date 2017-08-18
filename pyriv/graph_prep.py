@@ -32,6 +32,12 @@ class GraphBuilder(object):
                 print "file does not exist"
             if os.path.isfile(file_path) == False:
                 print "path is not a file or does not exist: %s" % file_path
+
+        try:
+            type(self.graph)
+        except AttributeError:
+            raise
+
         
 
     def prune_network(self, verbose=False):
@@ -55,12 +61,6 @@ class GraphBuilder(object):
             print "{} graphs with coastal nodes, {} without.".format(coast_n, noncoast_n)
         return RiverGraph(data=nx.compose_all(g_list), coastline_shp=self.coast_fn)
 
-    def write_gpickle(self, out_file_path):
-        """
-        This writes the DiGraph to a gpickle.
-        """
-        nxg = nx.DiGraph(data=self.graph)
-        nx.write_gpickle(nxg, out_file_path)
 
     def write_graphml(self, out_file_path):
         """
@@ -170,6 +170,19 @@ def validate_file(filepath, mode='read'):
             else:
                 filepath = raw_input("That filename already exists. Please try again:")
     return retval
+
+def write_gpickle(g, out_file_path):
+    """
+    This writes the DiGraph to a gpickle.
+
+    Parameters
+    ----------
+      g : 
+
+    """
+    
+    nxg = nx.DiGraph(data=g.graph)
+    nx.write_gpickle(nxg, out_file_path)
 
 def write_shp(g, out_file_path):
     """

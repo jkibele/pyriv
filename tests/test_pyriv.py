@@ -38,7 +38,7 @@ class TestPyriv(unittest.TestCase):
         global test_dir, datapath, testgraph
         self.test_dir = tempfile.mkdtemp()
         self.datapath = 'testdata/'
-        self.testgraph = GraphBuilder.GraphBuilder(self.datapath+'test.shp').graph
+        self.testgraph = GraphBuilder.read_from_file(self.datapath+'test.shp')
         print "setup" + str(type(self.testgraph))
 
     def tearDown(self):
@@ -69,7 +69,7 @@ class TestPyriv(unittest.TestCase):
         mock_nx_read_shp.return_value = self.testgraph 
         mock_river_graph_init.return_value = self.testgraph
       
-        success = GraphBuilder.GraphBuilder(self.datapath+'test.shp').graph
+        success = GraphBuilder.read_from_file(self.datapath+'test.shp')
         assert_list_equal(success.edges(), self.testgraph.edges())
 
     #   Note: this test will fail. See Issue #9
@@ -87,10 +87,10 @@ class TestPyriv(unittest.TestCase):
     @mock.patch('pyriv.graph_prep.nx.read_gpickle', autospec=True)
     def test_create_graph_from_gpickle(self, mock_nx_read_gpickle, mock_river_graph_init):
         """Test if a river graph can be created from a .gpickle"""
-        
+
         mock_nx_read_gpickle.return_value = self.testgraph
         mock_river_graph_init.return_value = self.testgraph
-        success = GraphBuilder.GraphBuilder(self.datapath+'test.gpickle').graph
+        success = GraphBuilder.read_from_file(self.datapath+'test.gpickle')
         assert_list_equal(success.edges(), self.testgraph.edges())
 
 

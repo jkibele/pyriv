@@ -2,7 +2,7 @@ import networkx as nx
 import geopandas as gpd
 from shapely.ops import polygonize
 from shapely.geometry import MultiPolygon, LineString, Point
-from units import length_in_display_units
+from units import length_in_display_units #this creates a dependency on numericalunits pkg
 from multiprocessing import Pool
 from functools import partial
 from itertools import chain
@@ -13,6 +13,29 @@ from itertools import chain
 #testlinefn = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/test_lines.shp'
 coastfn = '/home/jkibele/sasap-size-declines/RiverDistance/data/test_data/CoastLine.shp'
 rivfn = '/home/jkibele/sasap-size-declines/RiverDistance/data/test_data/Rivers.shp'
+
+#moved from river_graph.py static method
+def get_coastline_geom(shape_fn):
+    """
+    Read a shapefile, run unary_union on the geometries and return the resulting
+    geometry. In the case of a coastline, this will be a multilinestring of the
+    coast.
+
+    Parameters
+    ----------
+      shape_fn : string
+        The filepath to a line shapefile. Coastline polygons won't work.
+
+    Returns
+    -------
+      shapely.geometry.MultiLinestring
+        Just the geometry. Ready to use for distance calculations.
+    """
+    if shape_fn:
+        cldf = gpd.read_file(shape_fn)
+        return cldf.unary_union, cldf.crs
+    else:
+        return None, None
 
 #%% Make land polygon from coastline. Coasline is actually many linestrings.
 def polygonize_coastline(coast):

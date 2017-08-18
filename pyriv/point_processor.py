@@ -1,6 +1,5 @@
 import geopandas as gpd
 import pandas as pd
-from river_graph import point_to_tuple
 from shapely.geometry import Point
 
 def river_distances(shp_file, riv_graph, node_distance=False):
@@ -22,6 +21,31 @@ def river_distances(shp_file, riv_graph, node_distance=False):
 		dser = pd.Series(d, name='node_dist')
 		pnts = pnts.join(dser)
 	return pnts
+
+def point_to_tuple(g):
+    """
+    Convert `shapely.geometry.point.Point` or geopandas geoseries of length 1
+    to x,y coordinate tuple. If given a tuple, list, or numpy array a tuple will
+    be returned.
+    """
+    # this will handle geoseries
+    if g.__class__.__name__ == 'GeoSeries':
+        if len(g) == 1:
+            g = g.iloc[0]
+        else:
+            raise Exception("Can not convert {} length geoseries to tuple. Only length 1.".format(len(g)))
+    elif g.__class__.__name__ == 'GeoDataFrame':
+        if len(g) == 1:
+            g = g.geometry.iloc[0]
+        else:
+            raise Exception("Can not convert {} length geodataframe to tuple. Only length 1.".format(len(g)))
+
+    if g.__class__.__name__ in ['tuple', 'list', 'ndarray']:
+        result = tuple(g)
+    else:
+        # this will handle shapely `Point` geometries
+        result = tuple(np.array(g))
+    return result
 
 def save_points(riv_dist_gdf, outfile):
 	riv_dist_gdf.drop(['path'], axis=1).to_file(outfile)

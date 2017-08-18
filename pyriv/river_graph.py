@@ -3,53 +3,8 @@ import numpy as np
 import json
 from shapely.geometry import LineString, point, Point
 import geopandas as gpd
+from coastal import get_coastline_geom
 
-def point_to_tuple(g):
-    """
-    Convert `shapely.geometry.point.Point` or geopandas geoseries of length 1
-    to x,y coordinate tuple. If given a tuple, list, or numpy array a tuple will
-    be returned.
-    """
-    # this will handle geoseries
-    if g.__class__.__name__ == 'GeoSeries':
-        if len(g) == 1:
-            g = g.iloc[0]
-        else:
-            raise Exception("Can not convert {} length geoseries to tuple. Only length 1.".format(len(g)))
-    elif g.__class__.__name__ == 'GeoDataFrame':
-        if len(g) == 1:
-            g = g.geometry.iloc[0]
-        else:
-            raise Exception("Can not convert {} length geodataframe to tuple. Only length 1.".format(len(g)))
-
-    if g.__class__.__name__ in ['tuple', 'list', 'ndarray']:
-        result = tuple(g)
-    else:
-        # this will handle shapely `Point` geometries
-        result = tuple(np.array(g))
-    return result
-
-def get_coastline_geom(shape_fn):
-    """
-    Read a shapefile, run unary_union on the geometries and return the resulting
-    geometry. In the case of a coastline, this will be a multilinestring of the
-    coast.
-
-    Parameters
-    ----------
-      shape_fn : string
-        The filepath to a line shapefile. Coastline polygons won't work.
-
-    Returns
-    -------
-      shapely.geometry.MultiLinestring
-        Just the geometry. Ready to use for distance calculations.
-    """
-    if shape_fn:
-        cldf = gpd.read_file(shape_fn)
-        return cldf.unary_union, cldf.crs
-    else:
-        return None, None
 
 class RiverGraph(nx.DiGraph):
     """
@@ -60,21 +15,10 @@ class RiverGraph(nx.DiGraph):
         To make a RiverGraph from a graph, RiverGraph(data=graph)
         """
 
-        #if you have problems with typing, rememeber self.as_super 
-        #magic word here
         self.coastline, self.crs = get_coastline_geom(coastline_shp) 
         self._river_mouths_cache = None
         self._inland_deadends_cache = None
-        #print kwargs['data']
-        #print "BLAHHNSIPUJQO"
-        #self = super.DiGraph = kwargs['data']
-        # --->>>>>>>> this line causes the graph to be generated twice!!!
-        #               b/c of how nx works  
-
-        #print "pooppoop1"
         self = super(RiverGraph, self).__init__(*args, **kwargs)
-        #print "pooppoop"
-        #print type(self.graph)
 
     @property
     def river_mouths(self):

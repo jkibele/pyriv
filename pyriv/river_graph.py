@@ -4,7 +4,23 @@ import json
 from shapely.geometry import LineString, point, Point
 import geopandas as gpd
 from coastal import get_coastline_geom
+from multiprocessing import Pool
+from functools import partial
 
+
+# def copy_inner_nodes(nodelist, empty_graph):
+#     """ Inner function for parallelized graph copying of NODES."""
+    
+#     empty_graph.add_nodes_from(nodelist)
+#     print "inner nodes" + str(empty_graph.nodes())
+#     return empty_graph
+
+# def copy_inner_edges(edgelist, empty_graph):
+#     """ Inner function for parallelized graph copying of EDGES."""
+    
+#     empty_graph.add_edges_from(edgelist)
+#     print "inner edges" + str(empty_graph.edges())
+#     return empty_graph
 
 class RiverGraph(nx.DiGraph):
     """
@@ -35,6 +51,26 @@ class RiverGraph(nx.DiGraph):
             self._river_mouths_cache = ddf[ddf.is_coastal].geometry.apply(lambda g: tuple(np.array(g))).tolist()
             self._inland_deadends_cache = ddf[~ddf.is_coastal].geometry.apply(lambda g: tuple(np.array(g))).tolist()
         return self._inland_deadends_cache
+
+    # def copy(self):
+    #     """ Produces a deep copy of the graph, executing in parallel."""
+    #     cp_edges = self.edges()
+    #     cp_nodes = self.nodes()
+    #     graph_copy = nx.Graph()
+
+    #     numproc = 8
+    #     print ("in copy")
+    #     pool = Pool(numproc)
+    #     mut_nodes = pool.map(partial(copy_inner_nodes, empty_graph=graph_copy), cp_nodes)
+    #     mut_edges = pool.map(partial(copy_inner_edges, empty_graph=graph_copy), cp_edges)
+    #     pool.close()
+    #     pool.join()
+
+    #     print "results"
+    #     print mut_nodes
+    #     print mut_edges
+
+    #     return graph_copy
 
     def closest_node(self, pos):
         """

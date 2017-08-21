@@ -98,7 +98,11 @@ def deadend_coords_to_keys(G, ends):
 	
 	keylist = []
 	for i in range(0, len(ends)):
-		keylist.append(alldict[ends[i]])
+		try:
+			keylist.append(alldict[ends[i]])
+		except KeyError:
+			print alldict[ends[i]]
+
 		
 	return keylist
 
@@ -242,7 +246,7 @@ def missing_edges_list(graph_to_snap, dist_thresh, outfile):
 	
 	copy_w_id = add_node_ids_copy(graph_to_snap)
 	ends = copy_w_id.deadends()
-	ends_list = deadend_coords_to_keys(ends)
+	ends_list = deadend_coords_to_keys(copy_w_id, ends)
 	allnodesdict = node_to_dict(copy_w_id)
 
 	# default number of processes set to 8 
@@ -269,13 +273,13 @@ def snapped_graph(graph_to_snap, dist_thresh, outfile):
 
 	try:
 		graph_copy = graph_to_snap.copy()
-		allnodes_missingedges = missing_edges_list(graph_to_snap, dist_thresh, outfile)
+		allnodes_missingedges = missing_edges_list(graph_copy, dist_thresh, outfile)
 		add_missing_edges(graph_copy, allnodes_missingedges[1], allnodes_missingedges[0])
 		return graph_copy
 	except TypeError, AttributeError:
-		if not isinstance(dist_thresh, Float):
+		if not isinstance(dist_thresh, float):
 			print "dist_thresh is not a float/cannot be widened into a float"
-		if not isinstance(outfile, String):
+		if not isinstance(outfile, str):
 			print "outfile name is not a string"
 
 

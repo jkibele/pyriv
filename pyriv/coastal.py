@@ -1,18 +1,28 @@
+import numpy as np
 import networkx as nx
 import geopandas as gpd
 from shapely.ops import polygonize
 from shapely.geometry import MultiPolygon, LineString, Point
-from units import length_in_display_units
+from pyriv.units import length_in_display_units
+from pyriv.river_graph import point_to_tuple
 from multiprocessing import Pool
 from functools import partial
 from itertools import chain
+from ast import literal_eval
+import os
 
 #%% For testing
-#coastfn = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/CoastLine.shp'
-#rivfn = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/Rivers.shp'
-#testlinefn = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/test_lines.shp'
-coastfn = '/home/jkibele/sasap-size-declines/RiverDistance/data/test_data/CoastLine.shp'
-rivfn = '/home/jkibele/sasap-size-declines/RiverDistance/data/test_data/Rivers.shp'
+#test_data_dir = '/home/jkibele/sasap-size-declines/RiverDistance/data/test_data/'
+test_data_dir = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/'
+fullpath = lambda fn: os.path.join(test_data_dir, fn)
+coastfn = fullpath('CoastLine.shp')
+rivfn = fullpath('Rivers.shp')
+testlinefn = fullpath('test_lines.shp')
+rivmouthsfn = fullpath('RiverMouths.shp')
+uprivpoints = fullpath('UpriverTestPoints.shp')
+islandgraphmlfn = fullpath('island.graphml')
+islandgpickle = fullpath('island.gpickle')
+
 
 #%% Make land polygon from coastline. Coasline is actually many linestrings.
 def polygonize_coastline(coast):
@@ -82,6 +92,56 @@ def ocean_edges_for_node(node, land_obj, node_list):
                 ocean_edges += ((node, n, {'distance': length_in_display_units(line.length)}),)
                 print '.',
     return ocean_edges
+
+def closest_node(graph, pos):
+    """
+    Return the closest node to the given (x,y) position.
+
+    Parameters
+    ----------
+      pos : tuple or list or shapely.geometry.point.Point
+        Coordinates as (x, y), i.e., (lon, lat) not (lat, lon). If shapely
+        point, will be converted to tuple.
+
+    Returns
+    -------
+      tuple
+        (x, y) coordinates of closest node.
+    """
+
+    nodes = np.array(graph.nodes())
+    node_pos = np.argmin(np.sum((nodes - pos)**2, axis=1))
+    return tuple(nodes[node_pos])
+
+def coastal_fish_distance(graph, pos0, pos1, weights='distance'):
+    """Find the shortest fish-distance line from one position to another.
+    
+    Parameters
+    ----------
+    graph : nx.Graph
+        Graph representation of 
+    pos0 : tuple or list or shapely.geometry.point.Point
+        Coordinates as (x, y), i.e., (lon, lat) not (lat, lon). If shapely
+        point, will be converted to tuple.
+    pos1 : tuple or list or shapely.geometry.point.Point
+        Coordinates as (x, y), i.e., (lon, lat) not (lat, lon). If shapely
+        point, will be converted to tuple.
+    
+    """
+    node0 = closest_node(graph, pos0)
+    node1 = closest_node(graph, pos1)
+    pth = nx.shortest_path(graph, node0, node1, weight=weights)
+    # convert to linestring and return
+    return LineString(pth)
+
+def cfd_to_pos_list(graph, pos0, pos_list, weights='distance'):
+    """Find coastal fish distance from pos0 to a list of positions.
+    """
+    line_list = list()
+    for pos in pos_list:
+        pth = coastal_fish_distance(graph, pos0, pos, weights=weights)
+        line_list.append(pth)
+    return line_list
 
 
 #%% Land Obj

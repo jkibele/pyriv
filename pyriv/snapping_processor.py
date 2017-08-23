@@ -12,7 +12,7 @@ from graph_prep import GraphBuilder
 
 def add_node_ids_copy(G):
 	"""
-	one line summary
+	Copies graph and adds numerical ID to nodes as attribute to the copy.
 
 	Parameters
 	----------
@@ -20,26 +20,33 @@ def add_node_ids_copy(G):
 
 	Returns
 	-------
-	Returns copy of graph with node ID attr. added
+	  mutated_copy : networkx digraph Returns copy of graph with node ID attr. added
+	    copy of G with ID attribute (an int) on each node
 	
-	Returns a copy of the graph with node ID attr (an int) added, 
-	used for finding problem nodes easier / quicker node identification
-	* Must use a dict with the nodes' as keys and the attributes listed
+	Notes: Used for finding problem nodes easier / quicker node identification
+	??* Must use a dict with the nodes' as keys and the attributes listed
 	"""
 
 	assert isinstance(G, nx.DiGraph) is True, "graph is not a digraph"
 
-	print type(G)
-	copy = G.copy()
-	return add_node_ids_mutate(copy)
+	#print type(G)
+	mutated_copy = add_node_ids_mutate(G.copy())
+	return mutated_copy
 
 def node_to_dict(G):
 	"""
+	Puts graph nodes into a dict with numerical IDs as keys. 
+
 	Parameters
 	----------
+	  G : networkx digraph
 
 	Returns
 	-------
+	  temp : dict, int --> node
+	    A dict with int IDs mapped to nodes from graph G
+
+	Note: Creates a way to reference nodes in a predictable, easily-indexible format
 	"""
 	assert isinstance(G, nx.DiGraph) is True, "graph is not a digraph"
 
@@ -57,18 +64,18 @@ def node_to_dict(G):
 
 def add_node_ids_mutate(G):
 	"""
+	Mutates graph and adds numerical ID to nodes as attribute to the copy.
+
 	Parameters
 	----------
+	  G : networkx digraph
 
 	Returns
 	-------
+	  G : networkx digraph
+	    Refernce to modified graph with numerical IDs added as node attributes
 
-	Params: networkx graph
-	Return: referfence to modified graph
-	
-	Modifies input graph with node ID attr (an int) added, 
-	used for finding problem nodes easier / quicker node identification
-	Must use a dict with the nodes' as keys and the attributes listed
+	??Must use a dict with the nodes' as keys and the attributes listed
 	"""
 	assert isinstance(G, nx.DiGraph) is True, "graph is not a digraph"
 	assert isinstance(G, dict) is False, "this should be a graph not a dict"
@@ -86,9 +93,13 @@ def deadend_coords_to_keys(G, ends):
 	"""
 	Parameters
 	----------
+	  G : networkx graph
+	    Must have node attribute 'ID' of type int
+	  ends : tuple of ??
 
 	Returns
 	-------
+	  keylist : list 
 	"""
 	assert type(ends) is TupleType, "collection of end nodes is not a tuple"
 	ends = list(ends)
@@ -106,14 +117,23 @@ def deadend_coords_to_keys(G, ends):
 
 def find_missing_edges_par(ends, nodes, threshold, numproc):
 	"""
+	Parallel wrapper method for finding missing edges algorithm.
+
 	Parameters
 	----------
+	  ends : dict of ??
+	    All the deadends found
+	  allnodes : iterable of all nodes
+	  threshold : float
+	    Max distance to snap
+	  numproc: int
+	    The number of processes you want to run in order to complete the task
 
 	Returns
 	-------
+	  cleaned_results : list of edges
+	    Missing edges to add where dist < threshold bewtween the deadend and other node 
 
-	Params: ends = deadends found dict, allnodes = iterable of all nodes; threshold = dist. thresh
-	Returns: a list of missing edges to add where dist < thresh. b/w the deadend & other node
 	
 	||'zd method to find missing edges (a CPU-bound task w/ no communication needs)
 	
@@ -166,13 +186,20 @@ def find_missing_edges_par(ends, nodes, threshold, numproc):
 
 def find_missing_edges_par_inner(key1, allnodes, th):
 	"""
-	inner function for || version of finding missing edges
+	Parallel inner method/algorithm for finding missing edges.
 
 	Parameters
 	----------
+	  key1 : ??
+	  allnodes : iterable of nodes
+	    ??
+	  th : float
+	    Max distance to snap
 
 	Returns
 	-------
+	  edges_to_add: ??
+	    ??
 	"""
 	
 	edges_to_add = []
@@ -193,16 +220,19 @@ def find_missing_edges_par_inner(key1, allnodes, th):
 
 def add_missing_edges(G, edges_to_add, allnodes):
 	"""
+	Add missing edges to a graph.
+
 	Parameters
 	----------
+	  G : networkx graph
+	    Graph to add edges ti
+	  edges_to_add : ?? list of edges to add w/ each entry an [x,y] list
+	  allnodes : ??
 
 	Returns
 	-------
-
-	Params: G = graph to add edges to; list of edges to add w/ each entry an [x,y] list
-	Returns: nothing
 	
-	IMPORTANT: MUTATES the graph passed in
+	Note: MUTATES the graph passed in
 	"""
 	for coord in edges_to_add:
 		G.add_edge(allnodes[coord[0]], allnodes[coord[1]])
@@ -212,15 +242,17 @@ def missing_edges_to_shp(pts, filepath, projection_code):
 	"""
 	Parameters
 	----------
+	  pts: ??
+	    nodes/pts describing missing edges
+	  filepath : string
+	    Relative filepath .shp to write to
+	  projection_code: string
+	    Projection_code to convert coords (should match the maps you started with for overlaying purposes)
 
 	Returns
 	-------
-
-	Params: nodes/pts describing missing edges; relative filepath .shp to write to; projection_code to convert
-			coords (should match the maps you started with for overlaying purposes)
-	Returns: none (writes to output file) 
 	
-	
+	Note: Writes out a file.
 	"""
 	pts = list(pts.values())
 	kcdf = gpd.GeoDataFrame({'geometry': [Point(n) for n in pts]})
@@ -253,6 +285,8 @@ def missing_edges_list(graph_to_snap, dist_thresh, outfile):
 
 def snapped_graph(graph_to_snap, dist_thresh, outfile):
 	"""
+	Returns a snapped copy of a graph.
+
 	Parameters
 	----------
 	  graph_to_snap : networkx DiGraph
@@ -289,8 +323,12 @@ def component_stats(G, verbose):
 	----------
 	  G : networkx DiGraph
 	  verbose : bool
-	    set to True if you want explanations of stats
-	
+	    Set to True if you want explanations of stats
+
+	Returns
+	-------
+
+	Note: Writes to terminal.
 	"""
 
 	explans = {}
@@ -317,6 +355,8 @@ def general_stats(G):
 	----------
 	  G : networkx DiGraph
 
+	Returns
+	-------
 
 	Notes
 	-----

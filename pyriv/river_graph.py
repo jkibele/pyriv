@@ -3,8 +3,8 @@ import numpy as np
 import json
 from shapely.geometry import LineString, point, Point
 import geopandas as gpd
+from threading import Thread
 from coastal import get_coastline_geom
-from multiprocessing import Pool
 from functools import partial
 
 
@@ -21,6 +21,8 @@ from functools import partial
 #     empty_graph.add_edges_from(edgelist)
 #     print "inner edges" + str(empty_graph.edges())
 #     return empty_graph
+
+
 
 class RiverGraph(nx.DiGraph):
     """
@@ -51,6 +53,22 @@ class RiverGraph(nx.DiGraph):
             self._river_mouths_cache = ddf[ddf.is_coastal].geometry.apply(lambda g: tuple(np.array(g))).tolist()
             self._inland_deadends_cache = ddf[~ddf.is_coastal].geometry.apply(lambda g: tuple(np.array(g))).tolist()
         return self._inland_deadends_cache
+
+## unfinished
+    # def copy_nodes_thread(self, id, g, nodelist):
+
+
+    # def copy_edges_thread(self, id, g, edgelist):
+
+
+    # def copy(self):
+    #     numthreads = 8
+    #     g_copy = nx.DiGraph()
+    #     e = self.edges()
+    #     n = self.nodes()
+
+    #     for i in range(numthreads):
+    #         thread = Thread(target=copy_nodes_thread, args=(i, g_copy,)
 
     # def copy(self):
     #     """ Produces a deep copy of the graph, executing in parallel."""

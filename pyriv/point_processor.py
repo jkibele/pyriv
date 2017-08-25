@@ -5,7 +5,22 @@ from shapely.geometry import Point
 
 def river_distances(shp_file, riv_graph, node_distance=False):
 	"""
+
+	Parameters
+	---------
+	shp_file : String
+		Input filepath to a .shp file that 
+	riv_graph : pyriv.RiverGraph
+	node_distance : {False, True}
+
+	Returns
+	-------
+	pts : ??
+
+	Notes
+	-----
 	Assumes projection units are meters for the moment.
+
 	"""
 	pnts = gpd.read_file(shp_file)
 	# function to find closest node for a point geometry

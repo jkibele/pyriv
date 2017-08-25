@@ -1,32 +1,36 @@
-import networkx as nx
+"""Every module should have a docstring at the top of the file.
+If your docstring does
+extend over multiple lines, the closing three quotation marks must be on
+a line by itself, preferably preceded by a blank line.
+
+"""
+from functools import partial
+from types import TupleType, ListType, IntType, DictType
+from multiprocessing import Pool
+
+import networkx as nx # don't use abbreviated names in docstrings 
 import numpy as np
 import geopandas as gpd
 from shapely.geometry import Point
-from multiprocessing import Pool
-from functools import partial
-from types import *
+
 from river_graph import RiverGraph
 from graph_prep import GraphBuilder
 
 
 
 def add_node_ids_copy(G):
-	"""
-	Copies graph and adds numerical ID to nodes as attribute to the copy.
+	"""Copies graph and adds numerical ID to nodes as attribute to the copy.
 
 	Parameters
 	----------
-	  G : networkx digraph
+	G : networkx.DiGraph
 
 	Returns
 	-------
-	  mutated_copy : networkx digraph Returns copy of graph with node ID attr. added
-	    copy of G with ID attribute (an int) on each node
-	
-	Notes: Used for finding problem nodes easier / quicker node identification
-	??* Must use a dict with the nodes' as keys and the attributes listed
-	"""
+	mutated_copy : networkx.DiGraph
+	    Copy of `G` with ID attribute (an int) on each node.
 
+	"""
 	assert isinstance(G, nx.DiGraph) is True, "graph is not a digraph"
 
 	#print type(G)
@@ -34,19 +38,20 @@ def add_node_ids_copy(G):
 	return mutated_copy
 
 def node_to_dict(G):
-	"""
-	Puts graph nodes into a dict with numerical IDs as keys. 
+	"""Puts graph nodes into a dict with numerical IDs as keys. 
+
+	?? Creates a way to reference nodes in a predictable, 
+	easily-indexible format.
 
 	Parameters
 	----------
-	  G : networkx digraph
+	G : networkx.DiGraph
 
 	Returns
 	-------
-	  temp : dict, int --> node
-	    A dict with int IDs mapped to nodes from graph G
+	temp : dict{ int: networkx.Graph.node }
+		A dict with int IDs mapped to nodes from graph `G`.
 
-	Note: Creates a way to reference nodes in a predictable, easily-indexible format
 	"""
 	assert isinstance(G, nx.DiGraph) is True, "graph is not a digraph"
 
@@ -68,17 +73,17 @@ def add_node_ids_mutate(G):
 
 	Parameters
 	----------
-	  G : networkx digraph
+	G : networkx.DiGraph
 
 	Returns
 	-------
-	  G : networkx digraph
+	G : networkx.DiGraph
 	    Refernce to modified graph with numerical IDs added as node attributes
 
 	??Must use a dict with the nodes' as keys and the attributes listed
 	"""
 	assert isinstance(G, nx.DiGraph) is True, "graph is not a digraph"
-	assert isinstance(G, dict) is False, "this should be a graph not a dict"
+	assert isinstance(G, DictType) is False, "this should be a graph not a dict"
 	attr_dict = {}
 	i = 0
 	keys = G.nodes()
@@ -93,15 +98,15 @@ def deadend_coords_to_keys(G, ends):
 	"""
 	Parameters
 	----------
-	  G : networkx graph
+	G : networkx graph
 	    Must have node attribute 'ID' of type int
-	  ends : tuple of ??
+	ends : tuple of ??
 
 	Returns
 	-------
-	  keylist : list 
+	keylist : list 
 	"""
-	assert type(ends) is TupleType, "collection of end nodes is not a tuple"
+	assert type(ends) is types.TupleType, "collection of end nodes is not a tuple"
 	ends = list(ends)
 	
 	
@@ -121,18 +126,20 @@ def find_missing_edges_par(ends, nodes, threshold, numproc):
 
 	Parameters
 	----------
-	  ends : dict of ??
+	ends : dict of ??
 	    All the deadends found
-	  allnodes : iterable of all nodes
-	  threshold : float
+	allnodes : iterable of all nodes
+	threshold : float
 	    Max distance to snap
-	  numproc: int
-	    The number of processes you want to run in order to complete the task
+	numproc: int
+	    The number of processes you want to run in order to complete 
+	    the task
 
 	Returns
 	-------
-	  cleaned_results : list of edges
-	    Missing edges to add where dist < threshold bewtween the deadend and other node 
+	cleaned_results : list of edges
+	    Missing edges to add where dist < threshold bewtween the 
+	    deadend and other node 
 
 	
 	||'zd method to find missing edges (a CPU-bound task w/ no communication needs)
@@ -142,10 +149,10 @@ def find_missing_edges_par(ends, nodes, threshold, numproc):
 	Note 2: Pool.map maps a fcn over sequence (str, unicode, list, tuple, buffer, or xrange) so
 						need to convert dict to that first
 	"""
-	assert type(ends) is ListType, "collection of end nodes is not a list"
-	assert type(ends[0]) is IntType, "nodes in ends list arent referred to by their ID"
+	assert isinstance(ends, ListType) is True, "collection of end nodes is not a list"
+	assert isinstance(ends[0], IntType) is True, "nodes in ends list arent referred to by their ID"
 	
-	assert type(nodes) is DictType, "collection of allnodes is not a dictionary"
+	assert isinstance(nodes, DictType), "collection of allnodes is not a dictionary"
 	
 	#need to convert the dict of dead ends to the correct format, which is:
 	#    key: (key, (coord_x, coord_y))
@@ -190,15 +197,15 @@ def find_missing_edges_par_inner(key1, allnodes, th):
 
 	Parameters
 	----------
-	  key1 : ??
-	  allnodes : iterable of nodes
+	key1 : ??
+	allnodes : iterable of nodes
 	    ??
-	  th : float
+	th : float
 	    Max distance to snap
 
 	Returns
 	-------
-	  edges_to_add: ??
+	edges_to_add: ??
 	    ??
 	"""
 	
@@ -224,10 +231,10 @@ def add_missing_edges(G, edges_to_add, allnodes):
 
 	Parameters
 	----------
-	  G : networkx graph
+	G : networkx graph
 	    Graph to add edges ti
-	  edges_to_add : ?? list of edges to add w/ each entry an [x,y] list
-	  allnodes : ??
+	edges_to_add : ?? list of edges to add w/ each entry an [x,y] list
+	allnodes : ??
 
 	Returns
 	-------
@@ -242,12 +249,13 @@ def missing_edges_to_shp(pts, filepath, projection_code):
 	"""
 	Parameters
 	----------
-	  pts: ??
+	pts: ??
 	    nodes/pts describing missing edges
-	  filepath : string
+	filepath : string
 	    Relative filepath .shp to write to
-	  projection_code: string
-	    Projection_code to convert coords (should match the maps you started with for overlaying purposes)
+	projection_code: string
+	    Projection_code to convert coords (should match the maps 
+	    you started with for overlaying purposes)
 
 	Returns
 	-------
@@ -264,7 +272,7 @@ def missing_edges_list(graph_to_snap, dist_thresh, outfile):
 	"""
 	Parameters
 	----------
-	  * see snap_graph method
+	* see snap_graph method
 
 	Returns
 	-------
@@ -284,21 +292,41 @@ def missing_edges_list(graph_to_snap, dist_thresh, outfile):
 
 
 def snapped_graph(graph_to_snap, dist_thresh, outfile):
-	"""
-	Returns a snapped copy of a graph.
+	"""Returns a snapped copy of a graph.
+
+	The input graph is copied, the copy is operated upon in such a way 
+	that if there are two dead-end nodes detected with a euclidean 
+	distance less than the supplied threshold, the edge between those 
+	dead ends will be added and the euclidean distance is supplied as 
+	the distance attribute to the new edge.
 
 	Parameters
 	----------
-	  graph_to_snap : networkx DiGraph
-	  dist_thresh : float
-	    snap gaps in network <= dist_thresh
-	  outfile : string
+	graph_to_snap : networkx.DiGraph
+	dist_thresh : float
+	    Threshold to declare missing edges against.
+	outfile : string
 	    file to write new network to (unused currently)
 
 	Returns
 	-------
-	  graph_copy : networkx DiGraph
+	graph_copy : networkx.DiGraph
 	    copy of graph_to_snap, with gaps <= dist_thresh snapped
+
+	Exceptions
+	----------
+	TypeError : Provided a wrong type to a method.
+	AttributeError : Provided a wrong type to a method.
+
+
+	See Also
+	--------
+	networkx.copy : Called to provide a deep copy of the graph.
+	missing_edges_list : Called to get the list of missing edges 
+		relative to the provided threshold.
+	add_missing_edges : Called to actually add missing edges to 
+		the graph copy.
+
 	"""
 
 	try:
@@ -307,9 +335,9 @@ def snapped_graph(graph_to_snap, dist_thresh, outfile):
 		add_missing_edges(graph_copy, allnodes_missingedges[1], allnodes_missingedges[0])
 		return graph_copy
 	except TypeError, AttributeError:
-		if not isinstance(dist_thresh, Float):
+		if not isinstance(dist_thresh, FloatType):
 			print "dist_thresh is not a float/cannot be widened into a float"
-		if not isinstance(outfile, String):
+		if not isinstance(outfile, StringType):
 			print "outfile name is not a string"
 
 
@@ -321,8 +349,8 @@ def component_stats(G, verbose):
 
 	Parameters
 	----------
-	  G : networkx DiGraph
-	  verbose : bool
+	G : networkx.DiGraph
+	verbose : bool
 	    Set to True if you want explanations of stats
 
 	Returns
@@ -353,7 +381,7 @@ def general_stats(G):
 
 	Parameters
 	----------
-	  G : networkx DiGraph
+	G : networkx.DiGraph
 
 	Returns
 	-------
@@ -429,8 +457,8 @@ def deadends_old(G):
 ############## ---- CLASS DEFINITION -----------------
 
 class SnapTool(object):
-    """
-    A graph representation of a river network.
+    """A graph representation of a river network.
+
     """
     def __init__(self):
     	pass

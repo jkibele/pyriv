@@ -89,19 +89,19 @@ class RiverGraph(nx.DiGraph):
         return self._inland_deadends_cache
 
     def closest_node(self, pos):
-        """
-        Return the closest node to the given (x,y) position.
+        """Return the closest node to the given (x,y) position.
 
         Parameters
         ----------
-          pos : tuple or list or shapely.geometry.point.Point
+        pos : tuple or list or shapely.geometry.point.Point
             Coordinates as (x, y), i.e., (lon, lat) not (lat, lon). If shapely
             point, will be converted to tuple.
 
         Returns
         -------
-          tuple
+        tuple
             (x, y) coordinates of closest node.
+
         """
 
         nodes = np.array(self.nodes())
@@ -117,22 +117,21 @@ class RiverGraph(nx.DiGraph):
         return np.array(json.loads(self[n0][n1]['Json'])['coordinates'])
 
     def edge_distance(self, ed):
-        """
-        Calculate edge distance by finding all vertices between nodes,
+        """Calculate edge distance by finding all vertices between nodes,
         creating a linestring, and return its distance. With the NHD data set
         this isn't necessary, because the edges have an attribute called
         'LengthKM'.
 
         Parameters
         ----------
-          ed : tuple or array-like
+        ed : tuple or array-like
             The coordinates of the nodes defining the edge. (node0, node1)
             a.k.a. ((x0,y0),(x1,y1)). These must be the exact coords of
             the nodes.
 
         Returns
         -------
-          length : float
+        length : float
             The edge length in units that are dependent on the projection.
         """
         pth = self.get_path(*ed)
@@ -140,6 +139,7 @@ class RiverGraph(nx.DiGraph):
 
     def weight_edges(self):
         """
+
         Calculate distance for each edge in a graph and return a copy of the
         graph with `distance` assigned to each edge. With the NHD data set this
         isn't necessary, because the edges have an attribute called 'LengthKM'.
@@ -213,19 +213,19 @@ class RiverGraph(nx.DiGraph):
 
     def deadend_gdf(self, dist=1.5):
         """
-        Create a point geodataframe of deadend nodes attributed with wheter each 
+        Create a point geodataframe of deadend nodes attributed with whether each 
         deadend is coastal or inland.
 
         Parameters
         ----------
-          dist : float
+        dist : float
             Threshold distance from the coast for a node to be considered coastal.
             Distance units are the units of the geographic projection. In the case
             of Alaska Albers the unit is meters.
 
         Return
         ------
-          geodataframe
+        geodataframe 
             Geodataframe of point geometry attributed with boolean `is_coastal` and
             string `end_type` with values of 'Coastal' and 'Inland'.
         """
@@ -269,14 +269,42 @@ class RiverGraph(nx.DiGraph):
     def downstream_rivermouths(self, start_node):
         """
         Given a start_node, return only the reachable nodes that are coastal.
+
+        Parameters
+        ----------
+        start_node : networkx.graph.node
+            Starting node from which to begin search for all downstream coastal
+            dead ends aka river mouths.
+
+        Returns
+        -------
+        list[networkx.graph.nodes] : List of coastal dead ends aka river mouths
+            that are reachable from the `start_node`.
+
+        See Also
+        --------
+        reachable_nodes: Called to determine the list of all reachable nodes
+            from `start_node`.
+
         """
         rn = self.reachable_nodes(start_node)
         return [n for n in rn if n in self.river_mouths]
 
     def has_rivermouth(self, node_list):
-        """
+        """Determine if list of nodes has a river mouth.
+
         Given a list of nodes, return `True` if at least one node is a river 
-        mouth. Otherwise, return `False`.
+        mouth. Otherwise, return `False`. A river mouth is a coastal dead end.
+
+        Parameters
+        ----------
+        start_node : list[networkx.graph.node]
+            List of nodes to check for a river mouth.
+
+        Returns
+        -------
+        boolean : True if list contains mouth, false if not.
+
         """
         return [n for n in node_list if n in self.river_mouths].any()
 

@@ -3,8 +3,8 @@ import networkx as nx
 import geopandas as gpd
 from shapely.ops import polygonize
 from shapely.geometry import MultiPolygon, LineString, Point
-from pyriv.units import length_in_display_units
-from pyriv.river_graph import point_to_tuple
+from units import length_in_display_units
+from river_graph import point_to_tuple
 from multiprocessing import Pool
 from functools import partial
 from itertools import chain
@@ -12,8 +12,8 @@ from ast import literal_eval
 import os
 
 #%% For testing
-#test_data_dir = '/home/jkibele/sasap-size-declines/RiverDistance/data/test_data/'
-test_data_dir = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/'
+test_data_dir = '/home/jkibele/sasap-size-declines/RiverDistance/data/test_data/'
+#test_data_dir = '/Users/jkibele/Documents/SASAP/sasap-size-declines/RiverDistance/data/test_data/'
 fullpath = lambda fn: os.path.join(test_data_dir, fn)
 coastfn = fullpath('CoastLine.shp')
 rivfn = fullpath('Rivers.shp')
@@ -43,9 +43,13 @@ def coords_from_coastline(coast):
     """
     if coast.__class__.__name__ != 'GeoDataFrame':
         coast = gpd.read_file(coast)
-        
-    clst = coast.geometry.apply(lambda l: l.coords).tolist()
-    fltlst = [item for sublist in clst for item in sublist]
+    
+#    print "geom type: {}".format(coast.geometry.iloc[0].type)
+    if coast.geometry.iloc[0].type.lower().find('poly') > -1:
+        fltlst = extract_poly_exterior_coords(coast.unary_union)
+    else: # assume it's a line feature
+        clst = coast.geometry.apply(lambda l: l.coords).tolist()
+        fltlst = [item for sublist in clst for item in sublist]
     return fltlst
 
 def extract_poly_exterior_coords(geom):

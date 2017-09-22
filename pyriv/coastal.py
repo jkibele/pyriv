@@ -94,7 +94,7 @@ def ocean_edges_for_node(node, land_obj, node_list):
             line = LineString((node,n))
             if not land_obj.line_crosses(line):
                 ocean_edges += ((node, n, {'distance': length_in_display_units(line.length)}),)
-                print '.',
+                # print '.',
     return ocean_edges
 
 def closest_node(graph, pos):
@@ -150,7 +150,7 @@ def cfd_to_pos_list(graph, pos0, pos_list, weights='distance'):
 
 #%% Land Obj
 class Land(object):
-    def __init__(self, coast, shrink=1.0):
+    def __init__(self, coast, gpickle=None, shrink=1.0):
         
         if coast.__class__.__name__ != 'GeoDataFrame':
             coast = gpd.read_file(coast)
@@ -159,12 +159,15 @@ class Land(object):
         self.land_poly = polygonize_coastline(self.gdf)
         self.land_shrunk = self.land_poly.buffer(-1*shrink)
         self.coords = coords_from_coastline(self.gdf)
-        self.cached_graph = None
+        if gpickle:
+            self.cached_graph = nx.read_gpickle(gpickle)
+        else:
+            self.cached_graph = None
         
-    def graph(self, dump_cached=False, n_jobs=6):
+    def graph(self, dump_cached=False, n_jobs=6, verbose=False):
         if dump_cached or not self.cached_graph:
             G = self.fresh_graph()
-            G = self._add_ocean_edges_complete(G, verbose=True, n_jobs=n_jobs)
+            G = self._add_ocean_edges_complete(G, verbose=verbose, n_jobs=n_jobs)
             self.cached_graph = G
         return self.cached_graph
     

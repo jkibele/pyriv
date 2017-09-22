@@ -150,7 +150,7 @@ def cfd_to_pos_list(graph, pos0, pos_list, weights='distance'):
 
 #%% Land Obj
 class Land(object):
-    def __init__(self, coast, gpickle=None, shrink=1.0):
+    def __init__(self, coast, graph=None, shrink=1.0):
         
         if coast.__class__.__name__ != 'GeoDataFrame':
             coast = gpd.read_file(coast)
@@ -159,8 +159,10 @@ class Land(object):
         self.land_poly = polygonize_coastline(self.gdf)
         self.land_shrunk = self.land_poly.buffer(-1*shrink)
         self.coords = coords_from_coastline(self.gdf)
-        if gpickle:
-            self.cached_graph = nx.read_gpickle(gpickle)
+        if type(graph).__name__ == 'Graph':
+            self.cached_graph = graph
+        elif type(graph).__name__ == 'str':
+            self.cached_graph = nx.read_gpickle(graph)
         else:
             self.cached_graph = None
         

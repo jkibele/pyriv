@@ -40,6 +40,27 @@ def nearest_coast_pnt(land_df, riv_mouth_pnt, return_dist=False):
     else:
         return c_pnt
 
+def nearest_river_pnt(riv_df, pnt, return_dist=False, threshold=None):
+    """
+    Find nearest point on a line in riv_df.
+    """
+    nearest_riv = riv_df.loc[riv_df.distance(pnt).argmin()]
+    rivdist = nearest_riv.geometry.distance(pnt)
+    
+    r_geom = nearest_riv.geometry
+    r_dist = r_geom.project(pnt)
+    r_pnt = r_geom.interpolate(r_dist)
+    
+    if return_dist:
+        return pnt.distance(r_pnt)
+    elif threshold:
+        if pnt.distance(r_pnt) > threshold:
+            return None
+        else:
+            return r_pnt
+    else:
+        return r_pnt
+        
 def deadend_distances(shp_file, riv_graph, node_distance=False):
     """
     Assumes projection units are meters for the moment.

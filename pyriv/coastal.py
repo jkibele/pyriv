@@ -83,11 +83,20 @@ def graph_from_coast(coast):
     if coast.__class__.__name__ != 'GeoDataFrame':
         coast = gpd.read_file(coast)
 
-def ocean_edges_for_node(node, land_obj, node_list):
+def radius_filter(node, node_list, radius=5000):
+    node = Point(node)
+    pnts = [Point(n) for n in node_list]
+    keep = [tuple(np.array(p)) for p in pnts if node.distance(p) <= radius]
+    return keep
+
+def ocean_edges_for_node(node, land_obj, node_list, radius=None):
     """
     multiprocessing can't work with functions that are not a top level, so I'm
     moving this out here to see if I can make it work.
     """
+    if radius:
+        node_list = radius_filter(node, node_list, radius=radius)
+
     ocean_edges = tuple()
     for n in node_list:
         if node <> n:
@@ -134,7 +143,10 @@ def coastal_fish_distance(graph, pos0, pos1, weights='distance'):
     """
     node0 = closest_node(graph, pos0)
     node1 = closest_node(graph, pos1)
-    pth = nx.shortest_path(graph, node0, node1, weight=weights)
+    if node0 == node1:
+        pth = None
+    else:
+        pth = nx.shortest_path(graph, node0, node1, weight=weights)
     # convert to linestring and return
     return LineString(pth)
 
@@ -184,26 +196,25 @@ class Land(object):
         """
         return line.intersects(self.land_shrunk)
     
-#    def _ocean_edges_for_node(self, graph, node):
-#        ocean_edges = tuple()
-#        for n in graph.nodes_iter():
-#            if node <> n:
-#                line = LineString((node,n))
-#                if not self.line_crosses(line):
-#                    ocean_edges += ((node, n, {'distance': length_in_display_units(line.length)}),)
-#                    print '.',
-#        return ocean_edges
+    def add_ocean_edges(self, nodes, n_jobs=6, radius=None):
+        oe_node = partial(ocean_edges_for_node, land_obj=self, node_list=nodes, radius=radius)
+        pool = Pool(processes=n_jobs)
+        ocean_edges = pool.map(oe_node, self.cached_graph.nodes_iter())
+        # map returns a list of tuples (one for all the edges of each node). We
+        # need that flattened into a single iterable of all the edges.
+        ocean_edges = chain.from_iterable(ocean_edges)
+        self.cached_graph.add_edges_from(ocean_edges)
+        return self.cached_graph
     
-    def _add_ocean_edges_complete(self, graph, n_jobs=6, verbose=False):
+    def _add_ocean_edges_complete(self, graph, n_jobs=6, radius=None, verbose=False):
         if verbose:
-            cnt = 1
             import time
             t0 = time.time()
             print "Starting at %s to add edges for %i nodes." % (time.asctime(time.localtime(t0)), graph.number_of_nodes() )
             edge_possibilities = graph.number_of_nodes() * (graph.number_of_nodes() -1)
             print "We'll have to look at somewhere around %i edge possibilities." % ( edge_possibilities )
             print "Node: ",
-        oe_node = partial(ocean_edges_for_node, land_obj=self, node_list=graph.nodes())
+        oe_node = partial(ocean_edges_for_node, land_obj=self, node_list=graph.nodes(), radius=radius)
         pool = Pool(processes=n_jobs)
         ocean_edges = pool.map(oe_node, graph.nodes_iter())
         # map returns a list of tuples (one for all the edges of each node). We

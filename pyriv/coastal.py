@@ -1,5 +1,6 @@
 import numpy as np
 import networkx as nx
+from networkx import NetworkXNoPath
 import geopandas as gpd
 from shapely.ops import polygonize
 from shapely.geometry import MultiPolygon, LineString, Point
@@ -10,6 +11,7 @@ from functools import partial
 from itertools import chain
 from ast import literal_eval
 import os
+import json
 
 #%% For testing
 test_data_dir = '/home/jkibele/sasap-size-declines/RiverDistance/data/test_data/'
@@ -126,7 +128,59 @@ def closest_node(graph, pos):
     node_pos = np.argmin(np.sum((nodes - pos)**2, axis=1))
     return tuple(nodes[node_pos])
 
-def coastal_fish_distance(graph, pos0, pos1, weights='distance'):
+def get_path(graph, n0, n1):
+    """
+    If n0 and n1 are adjacent connected nodes in the graph, this function
+    return an array of point coordinates along the river linking
+    these two nodes.
+    """
+    try:
+        linepath = np.array(json.loads(graph[n0][n1]['Json'])['coordinates'])
+    except KeyError:
+        linepath = np.array((n0, n1))
+    return linepath
+
+
+def get_full_path(graph, short_path):
+    """
+    This will take a path consisting of just nodes, and return the
+    full path that contains all the vertices between nodes as well.
+    """
+    pnts = []
+    for i, pnt in enumerate(short_path[:-1]):
+        p = get_path(graph, pnt, short_path[i+1])
+        pnts.append(p)
+    return np.vstack(pnts)
+
+def shortest_full_path(graph, node0, node1, weights='distance'):
+    """
+    Find the shortest full path between 2 positions. This will find
+    the nodes closest to the given positions, the nodes between those
+    nodes for the shortest path, and fill in all the available
+    vertices in the linestring.
+
+    Parameters
+    ----------
+      node0 : tuple or array-like
+        x,y (lon,lat) coordinates for the start point
+      node1 : tuple or array-like
+        x,y (lon,lat) coordinates for the end point
+      graph : NetworkX Graph or DiGraph object
+        The Graph
+
+    Returns
+    -------
+      shapely.geometry.linestring.LineString
+        A geometry representing the shortest full path.
+    """
+    # find the nodes that define the shortest path between nodes
+    pth = nx.shortest_path(graph, node0, node1, weight=weights)
+    # fill in the missing vertices
+    pth = get_full_path(graph, pth)
+    # convert to linestring and return
+    return LineString(pth)
+
+def coastal_fish_distance(graph, pos0, pos1, weights='distance', raise_fail=True):
     """Find the shortest fish-distance line from one position to another.
     
     Parameters
@@ -146,7 +200,12 @@ def coastal_fish_distance(graph, pos0, pos1, weights='distance'):
     if node0 == node1:
         pth = None
     else:
-        pth = nx.shortest_path(graph, node0, node1, weight=weights)
+        try:
+            pth = shortest_full_path(graph, node0, node1, weights=weights)
+        except NetworkXNoPath:
+            pth = None
+            if raise_fail:
+                raise NetworkXNoPath("No netowrk path between these nodes.")
     # convert to linestring and return
     return LineString(pth)
 

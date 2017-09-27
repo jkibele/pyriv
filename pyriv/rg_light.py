@@ -6,6 +6,37 @@ from shapely.geometry import LineString, point, Point, LinearRing
 import geopandas as gpd
 import pandas as pd
 
+def json_linestring_reverse(ls_json):
+    ed_attr_dict = json.loads(ls_json)
+    ed_attr_dict["coordinates"] = ed_attr_dict["coordinates"][::-1]
+    rev_json = json.dumps(ed_attr_dict)
+    return rev_json
+
+def full_reverse(G):
+    """
+    This will reverse the linestring path between nodes as well as the
+    order of the nodes.
+    """
+    G = G.reverse()
+    for n0,n1 in G.edges_iter():
+        try:
+            ls_json = G[n0][n1]['Json']
+            G[n0][n1]['Json'] = json_linestring_reverse(ls_json)
+        except KeyError:
+            # This means there's no json path so we don't need to 
+            # reverse it.
+            pass
+    return G
+
+def add_reverse(G):
+    """
+    Make a fully reversed directional copy and add it to the original. 
+    This will let us find the proper path up and down the same river.
+    """
+    rG = full_reverse(G)
+    return nx.compose(G, rG)
+
+
 def path_completion(land_df, path_geom):
     """
     Don't pass in a point that's already outside the land polygon.
@@ -60,7 +91,7 @@ def nearest_river_pnt(riv_df, pnt, return_dist=False, threshold=None):
             return r_pnt
     else:
         return r_pnt
-        
+
 def deadend_distances(shp_file, riv_graph, node_distance=False):
     """
     Assumes projection units are meters for the moment.

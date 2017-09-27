@@ -230,7 +230,7 @@ class Land(object):
         self.land_poly = polygonize_coastline(self.gdf)
         self.land_shrunk = self.land_poly.buffer(-1*shrink)
         self.coords = coords_from_coastline(self.gdf)
-        if type(graph).__name__ == 'Graph':
+        if type(graph).__name__ in ('Graph','MultiGraph','DiGraph','MultiDiGraph'):
             self.cached_graph = graph
         elif type(graph).__name__ == 'str':
             self.cached_graph = nx.read_gpickle(graph)

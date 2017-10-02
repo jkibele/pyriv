@@ -6,6 +6,31 @@ from shapely.geometry import LineString, point, Point, LinearRing
 import geopandas as gpd
 import pandas as pd
 
+def add_geom_edge(graph, path, reverse_too=True):
+    """
+    Add an edge to graph with the geometry of the path going into
+    the edge attributes. The end and/or start nodes should be
+    rounded to the same precision as the network you want to attach
+    it to.
+    """
+    vertlist = list([list(t) for t in path.coords])
+    startnode = tuple(vertlist[0])
+    endnode = tuple(vertlist[-1])
+    pjson = {
+        'type': 'LineString',
+        'coordinates': vertlist
+    }
+    edict = {
+        'distance': path.length * 0.001,
+        'Json': json.dumps(pjson)
+    }
+    graph.add_edge(startnode, endnode, attr_dict=edict)
+    if reverse_too:
+        # now add reverse edge
+        edict['Json'] = json_linestring_reverse(edict['Json'])
+        graph.add_edge(endnode, startnode, attr_dict=edict)
+    return graph
+
 def json_linestring_reverse(ls_json):
     ed_attr_dict = json.loads(ls_json)
     ed_attr_dict["coordinates"] = ed_attr_dict["coordinates"][::-1]

@@ -2,7 +2,7 @@ import networkx as nx
 import numpy as np
 import json
 from shapely import ops
-from shapely.geometry import LineString, point, Point, LinearRing
+from shapely.geometry import LineString, MultiLineString, point, Point, LinearRing
 import geopandas as gpd
 import pandas as pd
 
@@ -165,24 +165,57 @@ def point_to_tuple(g):
         result = tuple(np.array(g))
     return result
 
-def get_coastline_geom(shape_fn):
+def extract_poly_exterior_lines(geom):
+    """Extract the exterior lines from a polygon or multipolygon.
+    
+    Returns
+    -------
+    LineString or MultiLineString
+        All the exterior rings of geom.
+    
     """
-    Read a shapefile, run unary_union on the geometries and return the resulting
-    geometry. In the case of a coastline, this will be a multilinestring of the
-    coast.
+    if geom.type == 'Polygon':
+        exterior_lines = np.array(geom.exterior.coords)
+        return LineString(exterior_lines)
+    elif geom.type == 'MultiPolygon':
+        exterior_lines = []
+        for part in geom:
+            epc = extract_poly_exterior_lines(part)  # Recursive call
+            exterior_lines.append(epc)
+        return MultiLineString(exterior_lines)
+    else:
+        raise ValueError('Unhandled geometry type: ' + repr(geom.type))
+
+def get_coastline_geom(shape):
+    """
+    Read a shapefile, convert polygons to lines if necessary, run unary_union 
+    on the geometries and return the resulting geometry. In the case of a 
+    coastline, this will be a multilinestring of the coast.
 
     Parameters
     ----------
-      shape_fn : string
-        The filepath to a line shapefile. Coastline polygons won't work.
+      shape : geopandas.GeoDataFrame or string
+        A geodataframe or the filepath to a shapefile. Can be a polygon or a 
+        line shapefile.
 
     Returns
     -------
       shapely.geometry.MultiLinestring
         Just the geometry. Ready to use for distance calculations.
+      crs
+        The crs of the geometry.
     """
-    if shape_fn:
-        cldf = gpd.read_file(shape_fn)
+    if shape is not None:
+        # handle filepath strings or geodataframes
+        if type(shape) == str:
+            cldf = gpd.read_file(shape_fn)
+        else:
+            # assume it's a GeoDataFrame
+            cldf = shape
+        
+        # handle lines or polygons
+        if cldf.geom_type.apply(lambda s: s.find("Polygon") >= 0).all():
+            cldf = cldf.set_geometry(cldf.geometry.apply(extract_poly_exterior_lines))
         return cldf.unary_union, cldf.crs
     else:
         return None, None
@@ -190,18 +223,41 @@ def get_coastline_geom(shape_fn):
 class RiverGraph(nx.DiGraph):
     """
     A graph representation of a river network.
+    
+    See RiverGraph.__init__ docstring
     """
     def __init__(self, *args, **kwargs):
         """
-        To make a RiverGraph from a graph, RiverGraph(data=graph)
+        Build a RiverGraph object.
+        
+        Parameters
+        ----------
+          data : networkx.DiGraph or path to shapefile
+            This is what the river network graph will be built from. If it's a 
+            path to a shapefile, it'll be converted to a networkx graph.
+          coastline : path to shapefile or a geopandas.GeoDataFrame object
+            This can be a line or polygon representation of the coastline
+            
+        Returns
+        -------
+          A RiverGraph object
         """
 
         #if you have problems with typing, rememeber self.as_super 
         #magic word here
-#        self.coastline, self.crs = get_coastline_geom(coastline_shp) 
+        if "coastline" in kwargs.keys():
+            coastline_shp = kwargs["coastline"]
+            self.coastline, self.crs = get_coastline_geom(coastline_shp)
+        else:
+            self.coastline = None
+            self.crs = None
 #        self._river_mouths_cache = None
 #        self._inland_deadends_cache = None
         self._deadends_cache = None
+        if "data" in kwargs.keys():
+            if type(kwargs["data"]) == str:
+                # handle a shapefile path
+                kwargs["data"] = nx.read_shp(kwargs["data"])
         #print kwargs['data']
         #print "BLAHHNSIPUJQO"
         #self = super.DiGraph = kwargs['data']
@@ -426,6 +482,27 @@ class RiverGraph(nx.DiGraph):
         mouth. Otherwise, return `False`.
         """
         return [n for n in node_list if n in self.river_mouths].any()
+    
+    def prune_network(self, verbose=False):
+        """
+        Remove subgraphs of the network that do not connect to the coastline.
+        """
+        # weakly_connected_component_subgraphs doesn't work with the 
+        # RiverGraph subclass, so we have to switch it back to DiGraph
+        sg = self.graph
+        coast_n = 0
+        noncoast_n = 0
+        g_list = []
+        cps = nx.weakly_connected_component_subgraphs(sg)
+        for cp in cps:
+            if has_rivermouth(cp.nodes(), sg):
+                g_list.append(cp)
+                coast_n += 1
+            else:
+                noncoast_n += 1
+        if verbose:
+            print "{} graphs with coastal nodes, {} without.".format(coast_n, noncoast_n)
+        return RiverGraph(data=nx.compose_all(g_list), coastline_shp=self.coast_fn)
 
 
     # I think I'll delete this. Just commenting out for now

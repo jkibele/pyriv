@@ -45,10 +45,6 @@ def add_geom_edge(graph, path, reverse_too=True):
     return graph
 
 def json_linestring_reverse(ls_json):
-    ed_attr_dict = json.loads(ls_json)
-    ed_attr_dict["coordinates"] = ed_attr_dict["coordinates"][::-1]
-    rev_json = json.dumps(ed_attr_dict)
-    return rev_json
     """
     Reverses vertices within a JSON-encoded linestring. Used to edit attribute
     dictionary (redefine 'Json' attribute) in reverse edge of NetworkX.Graph
@@ -65,6 +61,10 @@ def json_linestring_reverse(ls_json):
         Reverses 'coordinates' attribute of 'Json' within input GeoJSON object
         Defines attributes for a new Networkx.Graph edge when edge has been reversed.
     """
+    ed_attr_dict = json.loads(ls_json)
+    ed_attr_dict["coordinates"] = ed_attr_dict["coordinates"][::-1]
+    rev_json = json.dumps(ed_attr_dict)
+    return rev_json
 
 def full_reverse(G):
     """

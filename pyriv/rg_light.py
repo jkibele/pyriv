@@ -237,6 +237,10 @@ class RiverGraph(nx.DiGraph):
             path to a shapefile, it'll be converted to a networkx graph.
           coastline : path to shapefile or a geopandas.GeoDataFrame object
             This can be a line or polygon representation of the coastline
+          riv_mouth_buffer : float
+            A distance in map units (generally inteded to be meters). River
+            deadends within this distance of the coast will be considered to
+            be river mouths. The default is 1.5 meters.
             
         Returns
         -------
@@ -251,18 +255,19 @@ class RiverGraph(nx.DiGraph):
         else:
             self.coastline = None
             self.crs = None
-#        self._river_mouths_cache = None
-#        self._inland_deadends_cache = None
+        self._river_mouths_cache = None
+        self._inland_deadends_cache = None
         self._deadends_cache = None
         if "data" in kwargs.keys():
             if type(kwargs["data"]) == str:
                 # handle a shapefile path
                 kwargs["data"] = nx.read_shp(kwargs["data"])
-        #print kwargs['data']
-        #print "BLAHHNSIPUJQO"
-        #self = super.DiGraph = kwargs['data']
-        # --->>>>>>>> this line causes the graph to be generated twice!!!
-        #               b/c of how nx works  
+                
+        if "riv_mouth_buffer" in kwargs.keys():
+            self.riv_mouth_buffer = kwargs["riv_mouth_buffer"]
+        else:
+            self.riv_mouth_buffer = 1.5
+        
         self = super(RiverGraph, self).__init__(*args, **kwargs)
 
     @property
@@ -286,6 +291,14 @@ class RiverGraph(nx.DiGraph):
         if not self._deadends_cache:
             self._deadends_cache = self.deadends()
         return self._deadends_cache
+    
+    def delete_cache(self):
+        """
+        Delete `_river_mouths_cache`, `_inland_deadends_cache`, and `_deadends_cache`.
+        """
+        self._river_mouths_cache = None
+        self._inland_deadends_cache = None
+        self._deadends_cache = None
 
     def closest_node(self, pos):
         """
@@ -410,7 +423,7 @@ class RiverGraph(nx.DiGraph):
         dead_nodes = degarr[:,0][dead_row_ind]
         return tuple(dead_nodes)
 
-    def deadend_gdf(self, dist=1.5):
+    def deadend_gdf(self, dist=None):
         """
         Create a point geodataframe of deadend nodes attributed with wheter each 
         deadend is coastal or inland.
@@ -420,7 +433,9 @@ class RiverGraph(nx.DiGraph):
           dist : float
             Threshold distance from the coast for a node to be considered coastal.
             Distance units are the units of the geographic projection. In the case
-            of Alaska Albers the unit is meters.
+            of Alaska Albers the unit is meters. If `dist` is left as the default
+            value `None`, the value from the `RiverGraph.riv_mouth_buffer` 
+            attribute will be used (default is 1.5).
 
         Return
         ------
@@ -428,6 +443,8 @@ class RiverGraph(nx.DiGraph):
             Geodataframe of point geometry attributed with boolean `is_coastal` and
             string `end_type` with values of 'Coastal' and 'Inland'.
         """
+        if dist is None:
+            dist = self.riv_mouth_buffer
         dnodes = self.deadends()
         ddf = gpd.GeoDataFrame({'geometry': [Point(n) for n in dnodes]})
         if self.crs:
@@ -441,7 +458,6 @@ class RiverGraph(nx.DiGraph):
         Return `True` if the given node is coastal.
         """
         node = tuple(node)
-        # get the edges with FCodes
         if node in self.river_mouths:
             return True
         else:

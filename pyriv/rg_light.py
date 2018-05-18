@@ -3,6 +3,8 @@ import numpy as np
 import json
 from shapely import ops
 from shapely.geometry import LineString, MultiLineString, point, Point, LinearRing
+from shapely.geometry.polygon import Polygon
+from shapely.geometry.multipolygon import MultiPolygon
 import geopandas as gpd
 import pandas as pd
 
@@ -61,6 +63,25 @@ def add_reverse(G):
     rG = full_reverse(G)
     return nx.compose(G, rG)
 
+def explode(indf):
+    """
+    Change a multipolygon geodataframe into a single polygon geodataframe.
+    
+    Code borrowed from: https://gist.github.com/mhweber/cf36bb4e09df9deee5eb54dc6be74d26
+    """
+    #indf = gpd.GeoDataFrame.from_file(indata)
+    outdf = gpd.GeoDataFrame(columns=indf.columns)
+    for idx, row in indf.iterrows():
+        if type(row.geometry) == Polygon:
+            outdf = outdf.append(row,ignore_index=True)
+        if type(row.geometry) == MultiPolygon:
+            multdf = gpd.GeoDataFrame(columns=indf.columns)
+            recs = len(row.geometry)
+            multdf = multdf.append([row]*recs,ignore_index=True)
+            for geom in range(recs):
+                multdf.loc[geom,'geometry'] = row.geometry[geom]
+            outdf = outdf.append(multdf,ignore_index=True)
+    return outdf
 
 def path_completion(land_df, path_geom):
     """
@@ -74,6 +95,7 @@ def path_completion(land_df, path_geom):
         ncp = nearest_coast_pnt(land_df, path_geom)
         ret_path = LineString((path_geom, ncp))
     return ret_path
+    
     
 
 def nearest_coast_pnt(land_df, riv_mouth_pnt, return_dist=False):

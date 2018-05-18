@@ -14,6 +14,19 @@ def add_geom_edge(graph, path, reverse_too=True):
     the edge attributes. The end and/or start nodes should be
     rounded to the same precision as the network you want to attach
     it to.
+    
+    Parameters
+    ----------
+      graph : NetworkX.Graph or NetworkX.DiGraph
+        A NetworkX Graph that you want to add an edge to using a Shapely geometry class.
+        Define reverse_too=True to add reverse edge (reverse_too=False establishes directionality).
+      path : Shapely.LineString or Shapely.MultiLineString
+        A shapely linestring that gives attributes to the new edge.
+    
+    Returns
+    ----------
+      graph : NetworkX.Graph or NetworkX.DiGraph
+        The graph with new edge and attributes from line geometry.
     """
     vertlist = list([list(t) for t in path.coords])
     startnode = tuple(vertlist[0])
@@ -34,6 +47,22 @@ def add_geom_edge(graph, path, reverse_too=True):
     return graph
 
 def json_linestring_reverse(ls_json):
+    """
+    Reverses vertices within a JSON-encoded linestring. Used to edit attribute
+    dictionary (redefine 'Json' attribute) in reverse edge of NetworkX.Graph
+    when you are reversing an edge that's been added by a Shapely Linestring geometry.
+    
+    Parameters
+    ----------
+      ls_json : GeoJSON-encoded linestring
+        Attribute 'Json' of NetworkX.Graph edge, containing coordinates of a Shapely LineString.
+    
+    Returns
+    ----------
+      rev_json : GeoJSON-encoded linestring
+        Reverses 'coordinates' attribute of 'Json' within input GeoJSON object
+        Defines attributes for a new Networkx.Graph edge when edge has been reversed.
+    """
     ed_attr_dict = json.loads(ls_json)
     ed_attr_dict["coordinates"] = ed_attr_dict["coordinates"][::-1]
     rev_json = json.dumps(ed_attr_dict)
@@ -43,6 +72,11 @@ def full_reverse(G):
     """
     This will reverse the linestring path between nodes as well as the
     order of the nodes.
+    
+    Parameters
+    ----------
+      G : 
+    
     """
     G = G.reverse()
     for n0,n1 in G.edges_iter():

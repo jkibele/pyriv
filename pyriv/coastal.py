@@ -1,6 +1,7 @@
 import numpy as np
 import networkx as nx
 from networkx import NetworkXNoPath
+import pandas as pd
 import geopandas as gpd
 from shapely.ops import polygonize
 from shapely.geometry import MultiPolygon, LineString, Point
@@ -8,7 +9,7 @@ from units import length_in_display_units
 from river_graph import point_to_tuple
 from multiprocessing import Pool
 from functools import partial
-from itertools import chain
+from itertools import chain, combinations
 from ast import literal_eval
 import os
 import json
@@ -181,16 +182,17 @@ def shortest_full_path(graph, node0, node1, weights='distance'):
     return LineString(pth)
 
 def coastal_fish_distance(graph, pos0, pos1, weights='distance', raise_fail=True):
-    """Find the shortest fish-distance line from one position to another.
+    """Find the shortest fish-distance (aka minimum aquatic distance) line from 
+    one position to another.
     
     Parameters
     ----------
-    graph : nx.Graph
-        Graph representation of 
-    pos0 : tuple or list or shapely.geometry.point.Point
+      graph : nx.Graph
+        Graph representation of the combined river and coastal network.
+      pos0 : tuple or list or shapely.geometry.point.Point
         Coordinates as (x, y), i.e., (lon, lat) not (lat, lon). If shapely
         point, will be converted to tuple.
-    pos1 : tuple or list or shapely.geometry.point.Point
+      pos1 : tuple or list or shapely.geometry.point.Point
         Coordinates as (x, y), i.e., (lon, lat) not (lat, lon). If shapely
         point, will be converted to tuple.
     
@@ -205,9 +207,95 @@ def coastal_fish_distance(graph, pos0, pos1, weights='distance', raise_fail=True
         except NetworkXNoPath:
             pth = None
             if raise_fail:
-                raise NetworkXNoPath("No netowrk path between these nodes.")
+                raise NetworkXNoPath("No network path between these nodes.")
     # convert to linestring and return
     return LineString(pth)
+
+def mad_df(graph, locations, label_column, weights='distance', raise_fail=True):
+    """Create a minimum aquatic distance (MAD) geodataframe for all points 
+    in `locations`.
+    
+    Parameters
+    ----------
+      graph : nx.Graph
+        Graph representation of the combined river and coastal network.
+      locations : geopandas.GeoDataFrame or a string file path
+        A point GeoDataFrame (or file path that can be opened by 
+        `geopandas.read_file`) representing the locations that you want
+        a MAD matrix for.
+      label_column : string
+        The name of the column in `locations` that contains labels you
+        want to use in the output.
+      
+    Returns
+    -------
+      geopandas.geodataframe
+        A geodataframe containing MAD paths between each point in 
+        `locations`. In addtion to the path geometries, it will also 
+        have the following columns:
+          from: the `label_column` value for the starting point
+          to: the `label_column` value for the end point
+          failure_flag: 0 if a path was found between the points
+            and 1 if no path was found
+          dist_km: The minimum aquatic distance (in kilometers)
+            between the `from` and `to` locations.
+            
+    Notes
+    -----
+      The locations and the graph are assumed to be in a projection with
+      meters as the unit of distance.
+    """
+    if locations.__class__.__name__ == "GeoDataFrame":
+        locs = locations
+    else:
+        locs = gpd.read_file(locations)
+    lcol = label_column
+        
+    combs = combinations(locs.index, 2)
+    path_rows = []
+    for indA, indB in combs:
+        A = locations.loc[indA]
+        B = locations.loc[indB]
+        try:
+            pth = coastal_fish_distance(graph, A.geometry, B.geometry, 
+                                        weights=weights, raise_fail=True)
+            fail_flag = 0
+        except NetworkXNoPath:
+            pth = LineString()
+            fail_flag = 1
+            if raise_fail:
+                raise NetworkXNoPath("No network path between {} and {}.".format(A[lcol], B[lcol]))
+        path_rows.append([A[lcol], B[lcol], fail_flag, pth])
+        
+    pathdf = gpd.GeoDataFrame(path_rows, columns=['from', 'to', 'failure_flag', 'geometry'])
+    pathdf.crs = locations.crs
+    pathdf['dist_km'] = pathdf.length * 1e-3
+    return pathdf
+
+def mad_matrix(mad_dataframe):
+    """Turn a mad_dataframe (output of `mad_df`) into a matrix format.
+    
+    """
+    mdf = mad_dataframe
+    labels = mdf['from'].append(mdf['to']).unique()
+    labels.sort()
+    dist_rows = []
+    for sc_row in labels:
+        drow = []
+        for sc_col in labels:
+            if sc_col == sc_row:
+                drow.append(0.0)
+            else:
+                dval_ind = ((mdf['from']==sc_row) & (mdf['to']==sc_col))
+                if not dval_ind.any():
+                    dval_ind = ((mdf['from']==sc_col) & (mdf['to']==sc_row))
+                    if not dval_ind.any():
+                        print "There's a problem with {} and {}.".format(sc_row, sc_col)
+                drow.append(mdf.loc[dval_ind, 'dist_km'].item())
+        dist_rows.append(drow)
+
+    return pd.DataFrame(dist_rows, index=labels, columns=labels)
+    
 
 def cfd_to_pos_list(graph, pos0, pos_list, weights='distance'):
     """Find coastal fish distance from pos0 to a list of positions.

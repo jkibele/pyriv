@@ -3,11 +3,14 @@ import pandas as pd
 from river_graph import point_to_tuple
 from shapely.geometry import Point
 
-def river_distances(shp_file, riv_graph, node_distance=False):
+def river_distances(pnts_gdf, riv_graph, node_distance=False):
     """
     Assumes projection units are meters for the moment.
     """
-    pnts = gpd.read_file(shp_file)
+    if pnts_gdf.__class__.__name__ != 'GeoDataFrame':
+        pnts = gpd.read_file(shp_file)
+    else:
+        pnts = pnts_gdf
     # function to find closest node for a point geometry
     cl_nd = lambda p: riv_graph.closest_node(point_to_tuple(p))
     path_find = lambda p: riv_graph.shortest_path_to_coast(cl_nd(p))

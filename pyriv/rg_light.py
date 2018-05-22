@@ -70,13 +70,19 @@ def json_linestring_reverse(ls_json):
 
 def full_reverse(G):
     """
-    This will reverse the linestring path between nodes as well as the
-    order of the nodes.
+    This will reverse all of the linestring path between nodes as well as the
+    order of all nodes.
     
     Parameters
     ----------
-      G : 
+      G : NetworkX.DiGraph
+        A directed NetworkX graph.
     
+    Returns
+    ----------
+      G: NetworkX.DiGraph
+        A directed NetworkX graph, the reverse of all edges and
+        order of nodes in the original directed graph G.
     """
     G = G.reverse()
     for n0,n1 in G.edges_iter():
@@ -93,6 +99,18 @@ def add_reverse(G):
     """
     Make a fully reversed directional copy and add it to the original. 
     This will let us find the proper path up and down the same river.
+    
+    Parameters
+    ----------
+      G: NetworkX.DiGraph
+        A directed NetworkX graph. This function reverses the direction of all graph
+        edges in a directed graph.
+    
+    Returns
+    ----------
+      nx.compose(G, rG) : NetworkX.Graph
+        An undirected NetworkX.Graph. The returned graph is undirected because it is
+        the union of two directed graphs (G and the reverse of G).
     """
     rG = full_reverse(G)
     return nx.compose(G, rG)

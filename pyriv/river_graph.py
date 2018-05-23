@@ -4,6 +4,12 @@ import json
 from shapely.geometry import LineString, point, Point
 import geopandas as gpd
 
+def node_rounding(graph, decimal_places=3):
+    myround = lambda f: round(f, decimal_places)
+    tround = lambda t: tuple([myround(f) for f in t])
+    graph = nx.relabel_nodes(graph, tround)
+    return graph
+
 def point_to_tuple(g):
     """
     Convert `shapely.geometry.point.Point` or geopandas geoseries of length 1

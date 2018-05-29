@@ -15,7 +15,8 @@ PyRiv is still under development. The existing code is functional, but messy. Do
 
 The initial development of PyRiv was motivated by the State of Alaska Salmon and People ([SASAP](https://alaskasalmonandpeople.org/)) project to analyse MAD between the massive number of data collection sites across the state of Alaska and associated Canadian watersheds. PyRiv was also used to calculate MAD for a study of river herring population structure that is currently in press:
 
-> Reid, K., Palkovacs, E.P., Hasselman, D.J., Baetscher, D., Kibele, J., Gahagan, B., Bentzen, P., McBride, M.C., Garza, J.C., (In Press). Comprehensive evaluation of genetic population structure for anadromous river herring with single nucleotide polymorphism data. Fisheries Research 
+> Reid, K., Palkovacs, E. P., Hasselman, D. J., Baetscher, D., Kibele, J., Gahagan, B., … Garza, J. C. (2018). Comprehensive evaluation of genetic population structure for anadromous river herring with single nucleotide polymorphism data. Fisheries Research, 12.
+
 
 ## Acknowledgements
 

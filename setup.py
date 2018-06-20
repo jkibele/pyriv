@@ -39,12 +39,12 @@ test_requirements = [
 setup(
     name='pyriv',
     version='0.2.10',
-    description="pyriv calculates the distance from a given starting point to the closest coastal edge via waterways.",
+    description="pyriv calculates minimum aquatic distance between points.",
     long_description=readme + '\n\n' + history,
     author="Jared Kibele",
     author_email='jkibele@nceas.ucsb.edu',
     url='https://github.com/jkibele/pyriv',
-    download_url='https://github.com/jkibele/pyriv/archive/0.1.tar.gz',
+    download_url='https://github.com/jkibele/pyriv/releases',
     packages=find_packages(include=['pyriv'], exclude=['docs']),
     entry_points={
         'console_scripts': [

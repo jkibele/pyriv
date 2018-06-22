@@ -13,7 +13,10 @@ def river_distances(pnts_gdf, riv_graph, node_distance=False):
         pnts = pnts_gdf
     # function to find closest node for a point geometry
     cl_nd = lambda p: riv_graph.closest_node(point_to_tuple(p))
-    path_find = lambda p: riv_graph.shortest_path_to_coast(cl_nd(p))
+    if riv_graph.coastline is None:
+        path_find = lambda p: riv_graph.shortest_path_to_deadend(cl_nd(p))
+    else:    
+        path_find = lambda p: riv_graph.shortest_path_to_coast(cl_nd(p))
     pnts['path'] = pnts.geometry.apply(path_find)
     pth_dist = lambda p: p.length * 0.001
     pnts['rivdist_km'] = pnts.path.apply(pth_dist)

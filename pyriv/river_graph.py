@@ -312,10 +312,6 @@ class RiverGraph(nx.DiGraph):
         paths to reachable `terminal_coastal_nodes`.
         """
         path_list = []
-        # this makes it much faster
-        # subg = self.reachable_subgraph(start_node)
-        # actually, no. I don't think that makes it faster
-        # ...and it doesn't work with reclass of DiGraph
         for tcn in self.downstream_rivermouths(start_node):
             sfp = self.shortest_full_path(start_node, tcn, weights=weights)
             path_list.append(sfp)
@@ -369,6 +365,32 @@ class RiverGraph(nx.DiGraph):
         else:
             result = ddict[min(ddict.keys())]
         return result
+
+    def river_distances(self, pnts_gdf, node_distance=True):
+        """
+        Assumes projection units are meters for the moment.
+        """
+        if pnts_gdf.__class__.__name__ != 'GeoDataFrame':
+            pnts = gpd.read_file(shp_file)
+        else:
+            pnts = pnts_gdf
+        # function to find closest node for a point geometry
+        cl_nd = lambda p: self.closest_node(point_to_tuple(p))
+        if self.coastline is None:
+            path_find = lambda p: self.shortest_path_to_deadend(cl_nd(p))
+        else:    
+            path_find = lambda p: self.shortest_path_to_coast(cl_nd(p))
+        pnts['path'] = pnts.geometry.apply(path_find)
+        pth_dist = lambda p: p.length * 0.001
+        pnts['rivdist_km'] = pnts.path.apply(pth_dist)
+        if node_distance:
+            pnts['nearest_node'] = pnts.geometry.apply(lambda p: Point(cl_nd(p)))
+            d = {}
+            for i, row in pnts.iterrows():
+                d[i] = row['geometry'].distance(row['nearest_node'])
+            dser = pd.Series(d, name='node_dist')
+            pnts = pnts.join(dser)
+        return pnts
 
     def plot(self, **kwargs):
         pos = dict(zip(self.nodes(), self.nodes()))

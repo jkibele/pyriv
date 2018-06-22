@@ -3,7 +3,8 @@ import numpy as np
 import json
 from shapely.geometry import LineString, point, Point
 import geopandas as gpd
-from common import *
+from .common import *
+from .river_dist import RiverDist
 
 class RiverGraph(nx.DiGraph):
     """
@@ -32,8 +33,6 @@ class RiverGraph(nx.DiGraph):
           A RiverGraph object
         """
 
-        #if you have problems with typing, rememeber self.as_super 
-        #magic word here
         if "coastline" in kwargs.keys():
             coastline_shp = kwargs["coastline"]
             self.coastline, self.crs = get_coastline_geom(coastline_shp)
@@ -156,6 +155,24 @@ class RiverGraph(nx.DiGraph):
             p = self.get_path(pnt, short_path[i+1])
             pnts.append(p)
         return np.vstack(pnts)
+
+    @property
+    def edge_linestrings(self):
+        """
+        Create a shapely LineString geometry for each edge and return a list
+        of those geometries.
+        """
+        pths = [LineString(self.get_full_path(e)) for e in self.edges()]
+        return pths
+
+    @property
+    def edge_geodataframe(self):
+        """
+        Create a shapely LineString geometry for each edge and return a 
+        geopandas.GeoDataFrame containing those geometries.
+        """
+        pgdf = gpd.GeoDataFrame({'geometry': self.edge_linestrings})
+        return pgdf
 
     def shortest_full_path(self, pos0, pos1, weights='distance'):
         """
@@ -371,7 +388,7 @@ class RiverGraph(nx.DiGraph):
         Assumes projection units are meters for the moment.
         """
         if pnts_gdf.__class__.__name__ != 'GeoDataFrame':
-            pnts = gpd.read_file(shp_file)
+            pnts = gpd.read_file(pnts_gdf)
         else:
             pnts = pnts_gdf
         # function to find closest node for a point geometry
@@ -390,8 +407,21 @@ class RiverGraph(nx.DiGraph):
                 d[i] = row['geometry'].distance(row['nearest_node'])
             dser = pd.Series(d, name='node_dist')
             pnts = pnts.join(dser)
-        return pnts
+        return RiverDist(pnts)
 
     def plot(self, **kwargs):
+        """
+        Invoke networkx.draw_networkx_edges for a RiverGraph instance.
+
+        See NetworkX documentation for more information.
+        """
         pos = dict(zip(self.nodes(), self.nodes()))
         return nx.draw_networkx_edges(self, pos, **kwargs)
+
+    def summary_plot(self, riv_color='steelblue', riv_alpha=0.6, **kwargs):
+        riv_end_pnts = self.deadend_gdf()
+        ax = self.edge_geodataframe.plot(color=riv_color, alpha=riv_alpha,
+                                        label='Rivers', zorder=1, **kwargs)
+        ax = riv_end_pnts.plot(ax=ax, zorder=2, label='Dead Ends')
+        return ax
+

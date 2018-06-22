@@ -1,7 +1,7 @@
 import common
 from river_graph import RiverGraph
 from graph_prep import GraphBuilder
-from point_processor import river_distances
+from river_dist import RiverDist
 import units
 import coastal
 

@@ -199,6 +199,9 @@ def nearest_river_pnt(riv_df, pnt, return_dist=False, threshold=None):
 
 def deadend_distances(shp_file, riv_graph, node_distance=False):
     """
+    I think I've superseded this with RiverGraph.river_distances. I'll probably
+    delete this. 
+    
     Assumes projection units are meters for the moment.
     """
     if type(shp_file).__name__ == 'GeoDataFrame' :

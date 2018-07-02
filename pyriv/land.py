@@ -1,13 +1,15 @@
 import geopandas as gpd
+from tempfile import mkdtemp
+import os
 from .common import *
 
 from shapely.geometry import Polygon
 
 class CoastLineGraph(nx.Graph):
-	"""
-	This class can turn a LineString representation of a coastline into a 
-	polygon representation.
-	"""
+    """
+    This class can turn a LineString representation of a coastline into a 
+    polygon representation.
+    """
     def __init__(self, *args, **kwargs):
         """
         Build a CoastLine object.
@@ -19,10 +21,15 @@ class CoastLineGraph(nx.Graph):
         -------
           A CoastLine object
         """
-        self = super(CoastLine, self).__init__(*args, **kwargs)
-        
+        self = super(CoastLineGraph, self).__init__(*args, **kwargs)
+
     @classmethod
     def read_shp(cls, shp_fn):
+        gdf = gpd.read_file(shp_fn)
+        if (gdf.geom_type == 'MultiLineString').any():
+            tmpdir = mkdtemp()
+            shp_fn = os.path.join(tmpdir, "single_part.shp")
+            sp_shp = explode(gdf).to_file(shp_fn)
         dig = nx.read_shp(shp_fn, simplify=False)
         return cls(dig)
     
@@ -40,19 +47,19 @@ class CoastLineGraph(nx.Graph):
         return gpd.GeoDataFrame({'geometry': self.polygons()})
 
 class Land(gpd.GeoDataFrame):
-	"""
-	This class will represent land geometry in order to generate a coastal graph.
-	"""
-	def __init__(self, *args, **kwargs):
-	    """
-	    Build a RiverGraph object.
-	    
-	    Parameters
-	    ----------
-	      
-	        
-	    Returns
-	    -------
-	      A Land object
-	    """
-	    self = super(Land, self).__init__(*args, **kwargs)
+    """
+    This class will represent land geometry in order to generate a coastal graph.
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Build a RiverGraph object.
+        
+        Parameters
+        ----------
+          
+            
+        Returns
+        -------
+          A Land object
+        """
+        self = super(Land, self).__init__(*args, **kwargs)

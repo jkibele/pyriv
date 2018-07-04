@@ -5,6 +5,7 @@ from .common import *
 from .units import length_in_display_units
 from multiprocessing import Pool
 from functools import partial
+from itertools import chain, combinations
 
 from shapely.geometry import Polygon
 
@@ -134,6 +135,48 @@ class CoastLine(nx.Graph):
         """
         return Land(self.poly_geodataframe())
 
+class CoastalGraph(nx.Graph):
+    """
+    This class represents a network graph of routes that can be traversed without
+    crossing land.
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Build a CoastLine object.
+
+        Parameters
+        ----------
+        data : input graph
+            Data to initialize graph.  If data=None (default) an empty
+            graph is created.  The data can be an edge list, or any
+            NetworkX graph object.  If the corresponding optional Python
+            packages are installed the data can also be a NumPy matrix
+            or 2d ndarray, a SciPy sparse matrix, or a PyGraphviz graph.
+
+        Returns
+        -------
+          A CoastLine object
+        """
+        super(CoastalGraph, self).__init__(*args, **kwargs)
+
+    @property
+    def edge_linestrings(self):
+        """
+        Create a shapely LineString geometry for each edge and return a list
+        of those geometries.
+        """
+        pths = [LineString(e) for e in self.edges()]
+        return pths
+
+    @property
+    def edge_geodataframe(self):
+        """
+        Create a shapely LineString geometry for each edge and return a 
+        geopandas.GeoDataFrame containing those geometries.
+        """
+        pgdf = gpd.GeoDataFrame({'geometry': self.edge_linestrings})
+        return pgdf
+
 class Land(gpd.GeoDataFrame):
     """
     This class will represent land geometry in order to generate a coastal graph.
@@ -157,10 +200,13 @@ class Land(gpd.GeoDataFrame):
         # have to use `object.__setattr___` because GeoPandas and Pandas handle attr
         # creation differently to allow for columns to be attributes.
         object.__setattr__(self, 'shrink', kwargs.pop('shrink', 1.0))
+        object.__setattr__(self, 'simplify_tolerance', kwargs.pop('simplify_tolerance', None))
         super(Land, self).__init__(*args, **kwargs)
         self._init_properties()
 
     def _init_properties(self):
+        if self.simplify_tolerance is not None:
+            self.set_geometry(self.simplify(self.simplify_tolerance), inplace=True)
         land_geom = self.unary_union
         land_shrunk = land_geom.buffer(-1 * self.shrink)
         object.__setattr__(self, 'land_geom', land_geom)
@@ -184,6 +230,11 @@ class Land(gpd.GeoDataFrame):
         """
         return line.intersects(self.land_shrunk)
 
+    def fresh_graph(self):
+        G = CoastalGraph()
+        G.add_nodes_from(self.exterior_coord_list)
+        return G
+
     def add_ocean_edges_complete(self, graph, n_jobs=6, radius=None, verbose=False):
         if verbose:
             import time
@@ -191,7 +242,7 @@ class Land(gpd.GeoDataFrame):
             print "Starting at %s to add edges for %i nodes." % (time.asctime(time.localtime(t0)), graph.number_of_nodes() )
             edge_possibilities = graph.number_of_nodes() * (graph.number_of_nodes() -1)
             print "We'll have to look at somewhere around %i edge possibilities." % ( edge_possibilities )
-            print "Node: ",
+            # print "Node: ",
         oe_node = partial(ocean_edges_for_node, land_poly=self.land_shrunk, node_list=graph.nodes(), radius=radius)
         pool = Pool(processes=n_jobs)
         ocean_edges = pool.map(oe_node, graph.nodes_iter())
@@ -203,4 +254,27 @@ class Land(gpd.GeoDataFrame):
             print "It took %i minutes to load %i edges." % ((time.time() - t0)/60, graph.number_of_edges() )
         return graph
 
+    def graph(self, n_jobs=6, radius=None, verbose=False):
+        G = self.fresh_graph()
+        G = self.add_ocean_edges_complete(G, n_jobs=n_jobs, radius=radius, verbose=verbose)
+        return G
+
+    @property
+    def exterior_coord_list(self):
+        """
+        A list of tuples representing all exterior coordinates from polygon geometries.
+        """
+        return reduce(lambda x,y: x + y, self.geometry.apply(extract_poly_exterior_coords))
+    
+    @property
+    def n_exterior_coords(self):
+        """
+        A count of exterior coordinates from polygons.
+        """
+        return len(self.exterior_coord_list)
+
+    def complexity_statement(self):
+        n = self.n_exterior_coords
+        return "{} nodes and around {} edge possibilities.".format(n, n * (n - 1))
+    
     

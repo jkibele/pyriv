@@ -248,6 +248,30 @@ def point_to_tuple(g):
         result = tuple(np.array(g))
     return result
 
+def extract_poly_exterior_coords(geom):
+    """Extract the exterior coordinates from a polygon or multipolygon.
+    
+    Returns
+    -------
+    list of tuples
+        All the exterior coordinates of geom.
+    
+    Notes
+    -----
+    This code was adapted from an answer on stackexchange:
+    https://gis.stackexchange.com/questions/119453/count-the-number-of-points-in-a-multipolygon-in-shapely
+    """
+    if geom.type == 'Polygon':
+        exterior_coords = geom.exterior.coords[:]
+    elif geom.type == 'MultiPolygon':
+        exterior_coords = []
+        for part in geom:
+            epc = extract_poly_exterior_coords(part)  # Recursive call
+            exterior_coords += epc[:]
+    else:
+        raise ValueError('Unhandled geometry type: ' + repr(geom.type))
+    return exterior_coords
+    
 def extract_poly_exterior_lines(geom):
     """Extract the exterior lines from a polygon or multipolygon.
 

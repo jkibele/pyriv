@@ -18,12 +18,12 @@ class RiverGraph(nx.DiGraph):
         
         Parameters
         ----------
-          data : networkx.DiGraph or path to shapefile
+        data : networkx.DiGraph or path to shapefile
             This is what the river network graph will be built from. If it's a 
             path to a shapefile, it'll be converted to a networkx graph.
-          coastline : path to shapefile or a geopandas.GeoDataFrame object
+        coastline : path to shapefile or a geopandas.GeoDataFrame object
             This can be a line or polygon representation of the coastline
-          riv_mouth_buffer : float
+        riv_mouth_buffer : float
             A distance in map units (generally inteded to be meters). River
             deadends within this distance of the coast will be considered to
             be river mouths. The default is 1.5 meters.
@@ -90,13 +90,13 @@ class RiverGraph(nx.DiGraph):
 
         Parameters
         ----------
-          pos : tuple or list or shapely.geometry.point.Point
+        pos : tuple or list or shapely.geometry.point.Point
             Coordinates as (x, y), i.e., (lon, lat) not (lat, lon). If shapely
             point, will be converted to tuple.
 
         Returns
         -------
-          tuple
+        tuple
             (x, y) coordinates of closest node.
         """
 
@@ -121,14 +121,14 @@ class RiverGraph(nx.DiGraph):
 
         Parameters
         ----------
-          ed : tuple or array-like
+        ed : tuple or array-like
             The coordinates of the nodes defining the edge. (node0, node1)
             a.k.a. ((x0,y0),(x1,y1)). These must be the exact coords of
             the nodes.
 
         Returns
         -------
-          length : float
+        length : float
             The edge length in units that are dependent on the projection.
         """
         pth = self.get_path(*ed)
@@ -183,11 +183,11 @@ class RiverGraph(nx.DiGraph):
 
         Parameters
         ----------
-          pos0 : tuple or array-like
+        pos0 : tuple or array-like
             x,y (lon,lat) coordinates for the start point
-          pos1 : tuple or array-like
+        pos1 : tuple or array-like
             x,y (lon,lat) coordinates for the end point
-          sg : NetworkX Graph or DiGraph object
+        sg : NetworkX Graph or DiGraph object
             The Graph
 
         Returns
@@ -232,7 +232,7 @@ class RiverGraph(nx.DiGraph):
 
         Parameters
         ----------
-          dist : float
+        dist : float
             Threshold distance from the coast for a node to be considered coastal.
             Distance units are the units of the geographic projection. In the case
             of Alaska Albers the unit is meters. If `dist` is left as the default
@@ -241,7 +241,7 @@ class RiverGraph(nx.DiGraph):
 
         Return
         ------
-          geodataframe
+        geodataframe
             Geodataframe of point geometry attributed with boolean `is_coastal` and
             string `end_type` with values of 'Coastal' and 'Inland'.
         """

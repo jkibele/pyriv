@@ -250,6 +250,11 @@ def point_to_tuple(g):
 
 def extract_poly_exterior_lines(geom):
     """Extract the exterior lines from a polygon or multipolygon.
+
+    Parameters
+    ----------
+    geom : shapely Polygon or MultiPolygon
+        The polygon that you'd like to turn into an exterior line.
     
     Returns
     -------

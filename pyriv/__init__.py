@@ -2,7 +2,7 @@ import common
 from river_graph import RiverGraph
 from graph_prep import GraphBuilder
 from river_dist import RiverDist
-from land import Land, CoastLineGraph
+from land import Land, CoastLine
 import units
 import coastal
 

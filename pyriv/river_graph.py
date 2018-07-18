@@ -5,6 +5,7 @@ from shapely.geometry import LineString, point, Point
 import geopandas as gpd
 from .common import *
 from .river_dist import RiverDist
+from .land import Land
 
 class RiverGraph(nx.DiGraph):
     """
@@ -21,12 +22,19 @@ class RiverGraph(nx.DiGraph):
         data : networkx.DiGraph or path to shapefile
             This is what the river network graph will be built from. If it's a 
             path to a shapefile, it'll be converted to a networkx graph.
-        coastline : path to shapefile or a geopandas.GeoDataFrame object
-            This can be a line or polygon representation of the coastline
+        coastline : path to a polygon shapefile or a pyriv.Land object
+            This is a polygon representation of the coastline. If you only have
+            a line shapefile you can use `pyriv.land.CoastLine` to convert it.
         riv_mouth_buffer : float
             A distance in map units (generally inteded to be meters). River
             deadends within this distance of the coast will be considered to
             be river mouths. The default is 1.5 meters.
+        rounding : integer, default 3
+            The number of places to round the node coordinates to. The default
+            (3) will round coordinates to the nearest millimeter (assuming a
+            projection with meters as units). This helps to avoid floating point
+            errors that can cause the same node to be not equivalent. If set to 
+            `None`, no rounding will take place.
             
         Returns
         -------
@@ -35,8 +43,12 @@ class RiverGraph(nx.DiGraph):
 
         if "coastline" in kwargs.keys():
             coastline_shp = kwargs["coastline"]
+            if type(coastline_shp) == str:
+                coastline_shp = Land(coastline_shp)
+            self.land = coastline_shp
             self.coastline, self.crs = get_coastline_geom(coastline_shp)
         else:
+            self.land = None
             self.coastline = None
             self.crs = None
         self._river_mouths_cache = None
@@ -52,7 +64,28 @@ class RiverGraph(nx.DiGraph):
         else:
             self.riv_mouth_buffer = 1.5
         
-        self = super(RiverGraph, self).__init__(*args, **kwargs)
+        rnd = kwargs.pop('rounding', 3)
+        super(RiverGraph, self).__init__(*args, **kwargs)
+        if rnd is not None:
+            self.__round(rnd)
+
+    def __round(self, decimal_places=3):
+        myround = lambda f: round(f, decimal_places)
+        tround = lambda t: tuple([myround(f) for f in t])
+        self = nx.relabel_nodes(self, tround, copy=False)
+        # self.round_all_edge_paths(decimal_places=decimal_places)
+        return self
+
+    def write_gpickle(self, file_path):
+        nx.write_gpickle(self, file_path)
+
+    @classmethod
+    def from_gpickle(cls, file_path):
+        return nx.read_gpickle(file_path)
+
+    @classmethod
+    def from_shapefile(cls, file_path, *args, **kwargs):
+        return cls(data=nx.read_shp(file_path), *args, **kwargs)
 
     @property
     def river_mouths(self):
@@ -99,10 +132,31 @@ class RiverGraph(nx.DiGraph):
         tuple
             (x, y) coordinates of closest node.
         """
-
         nodes = np.array(self.nodes())
         node_pos = np.argmin(np.sum((nodes - pos)**2, axis=1))
         return tuple(nodes[node_pos])
+
+    def round_edge_coords(self, ed, decimal_places=3):
+        """
+        This will round all coordinates in the json representation of the path
+        between nodes. I suspect this isn't really necessary, but I'm leaving
+        it in for now.
+        """
+        try:
+            geojson = json.loads( self.get_edge_data(*ed)['Json'] )
+            geojson['coordinates'] = np.round(np.array(geojson['coordinates']), decimal_places).tolist()
+            self[ed[0]][ed[1]]['Json'] = json.dumps(geojson)
+        except KeyError: # means there's no Json
+            pass
+
+    def round_all_edge_paths(self, decimal_places=3):
+        """
+        This will round all coordinates in the json representation of the paths
+        between nodes. I suspect this isn't really necessary, but I'm leaving
+        it in for now.
+        """
+        for ed in self.edges_iter():
+            self.round_edge_coords(ed, decimal_places=decimal_places)
 
     def get_path(self, n0, n1):
         """
@@ -110,7 +164,11 @@ class RiverGraph(nx.DiGraph):
         return an array of point coordinates along the river linking
         these two nodes.
         """
-        return np.array(json.loads(self[n0][n1]['Json'])['coordinates'])
+        try:
+            path = np.array(json.loads(self[n0][n1]['Json'])['coordinates'])
+        except KeyError: # means there's no Json
+            path = np.array((n0, n1))
+        return path
 
     def edge_distance(self, ed):
         """
@@ -225,7 +283,7 @@ class RiverGraph(nx.DiGraph):
         dead_nodes = degarr[:,0][dead_row_ind]
         return tuple(dead_nodes)
 
-    def deadend_gdf(self, dist=None):
+    def deadend_gdf(self, dist=None, tolerance=1e-5):
         """
         Create a point geodataframe of deadend nodes attributed with wheter each 
         deadend is coastal or inland.
@@ -238,12 +296,17 @@ class RiverGraph(nx.DiGraph):
             of Alaska Albers the unit is meters. If `dist` is left as the default
             value `None`, the value from the `RiverGraph.riv_mouth_buffer` 
             attribute will be used (default is 1.5).
+        tolerance : float
+            Points within this distance of the nearest coastal node will be
+            considered coincident with that node. This should be set to a smaller
+            value than nodes will be rounded to when joined to the coast network.
 
         Return
         ------
         geodataframe
             Geodataframe of point geometry attributed with boolean `is_coastal` and
-            string `end_type` with values of 'Coastal' and 'Inland'.
+            string `end_type` with values of 'Coastal', 'CoastNode', 'Ocean', and 
+            'Inland'.
         """
         if dist is None:
             dist = self.riv_mouth_buffer
@@ -254,7 +317,37 @@ class RiverGraph(nx.DiGraph):
         if self.coastline is not None:
             ddf['is_coastal'] = ddf.distance(self.coastline) <= dist
             ddf['end_type'] = ddf.is_coastal.map({True: 'Coastal', False: 'Inland'})
+            nearcp = lambda p: nearest_coast_pnt(self.land, p)
+            nearest = ddf.geometry.apply(nearcp)
+            coastnodes = ddf.geometry.distance(nearest) < tolerance
+            ddf.loc[coastnodes, "end_type"] = "CoastNode"
+            oc_pnts = ~ddf.geometry.apply(self.land.point_on_land)
+            ddf.loc[oc_pnts, "end_type"] = "Ocean"
         return ddf
+
+    def auto_complete_segments(self, dist=None):
+        """
+        Return a geodataframe of linestrings that connect deadends that are on 
+        land within `dist` of the coast to the actual coast.
+        """
+        degdf = self.deadend_gdf(dist=dist)
+        cgdf = degdf.query("end_type == 'Coastal'")
+        sp_landdf = explode(self.land)
+        auto_comp = lambda pth: path_completion(sp_landdf, pth)
+        gs = cgdf.geometry.apply(auto_comp)
+        asegs = gpd.GeoDataFrame({'geometry': gs})
+        asegs.crs = self.crs
+        return asegs[asegs.length > 0.0]
+
+    def auto_complete(self, dist=None):
+        """
+        Auto complete the river ends that are on land but within `dist` (or
+        within `self.riv_mouth_buffer` if `dist` is None) by adding a node
+        on the nearest bit of coastline.
+        """
+        acomp = self.auto_complete_segments(dist=dist)
+        self.add_edges_from(acomp.geometry.apply(lambda l: l.coords))
+        self.delete_cache()
 
     def is_rivermouth(self, node):
         """
@@ -422,6 +515,19 @@ class RiverGraph(nx.DiGraph):
         riv_end_pnts = self.deadend_gdf()
         ax = self.edge_geodataframe.plot(color=riv_color, alpha=riv_alpha,
                                         label='Rivers', zorder=1, **kwargs)
-        ax = riv_end_pnts.plot(ax=ax, zorder=2, label='Dead Ends')
+        if self.land is None:
+            ax = riv_end_pnts.plot(ax=ax, zorder=2, label='Dead Ends')
+        else:
+            ends = {
+                "Ocean": dict(zorder=2, label="Ocean", color='steelblue', marker='+'),
+                "Coastal": dict(zorder=3, label="Coastal", color='green', facecolor='None', marker='o'),
+                "CoastNode": dict(zorder=4, label="Coast Node", color='green', marker='o'),
+                "Inland": dict(zorder=5, label="Inland", color='red', marker='^')
+            }
+            for et, kwrds in ends.iteritems():
+                etdf = riv_end_pnts.query("end_type == @et")
+                if len(etdf):
+                    ax = etdf.plot(ax=ax, **kwrds)
+            ax = self.land.plot(ax=ax, zorder=0, color='beige', alpha=0.8)
         return ax
 

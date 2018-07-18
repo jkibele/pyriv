@@ -1,8 +1,10 @@
 import geopandas as gpd
 from tempfile import mkdtemp
 import os
+from fiona.crs import from_epsg as crs_from_epsg
 from .common import *
 from .units import length_in_display_units
+from .mad_graph import MadGraph
 from multiprocessing import Pool
 from functools import partial
 from itertools import chain, combinations
@@ -24,7 +26,7 @@ def ocean_edges_for_node(node, land_poly, node_list, radius=None):
     node 
         The node to calculate edges for.
     land_poly : shapely Polygon or Multipolygon
-        The (shrunken) land geometry being used to create a CoastalGraph
+        The (shrunken) land geometry being used to create a MadGraph
     node_list
 
     radius : float
@@ -74,6 +76,15 @@ class CoastLine(nx.Graph):
         -------
           A CoastLine object
         """
+        epsg = kwargs.pop('epsg', None)
+        crs = kwargs.pop('crs', None)
+        if crs is not None:
+            self.crs = crs
+        elif epsg is not None:
+            self.crs = crs_from_epsg(epsg)
+        else:
+            self.crs = None
+
         super(CoastLine, self).__init__(*args, **kwargs)
 
     @classmethod
@@ -107,7 +118,7 @@ class CoastLine(nx.Graph):
             shp_fn = os.path.join(tmpdir, "single_part.shp")
             sp_shp = explode(gdf).to_file(shp_fn)
         dig = nx.read_shp(shp_fn, simplify=False)
-        return cls(dig)
+        return cls(dig, crs=gdf.crs)
     
     def connected_subgraphs(self):
         """
@@ -127,7 +138,9 @@ class CoastLine(nx.Graph):
         return [Polygon(r) for r in self.rings()]
     
     def poly_geodataframe(self):
-        return gpd.GeoDataFrame({'geometry': self.polygons()})
+        gdf = gpd.GeoDataFrame({'geometry': self.polygons()})
+        gdf.crs = self.crs
+        return gdf
 
     def land_object(self):
         """
@@ -135,47 +148,6 @@ class CoastLine(nx.Graph):
         """
         return Land(self.poly_geodataframe())
 
-class CoastalGraph(nx.Graph):
-    """
-    This class represents a network graph of routes that can be traversed without
-    crossing land.
-    """
-    def __init__(self, *args, **kwargs):
-        """
-        Build a CoastLine object.
-
-        Parameters
-        ----------
-        data : input graph
-            Data to initialize graph.  If data=None (default) an empty
-            graph is created.  The data can be an edge list, or any
-            NetworkX graph object.  If the corresponding optional Python
-            packages are installed the data can also be a NumPy matrix
-            or 2d ndarray, a SciPy sparse matrix, or a PyGraphviz graph.
-
-        Returns
-        -------
-          A CoastLine object
-        """
-        super(CoastalGraph, self).__init__(*args, **kwargs)
-
-    @property
-    def edge_linestrings(self):
-        """
-        Create a shapely LineString geometry for each edge and return a list
-        of those geometries.
-        """
-        pths = [LineString(e) for e in self.edges()]
-        return pths
-
-    @property
-    def edge_geodataframe(self):
-        """
-        Create a shapely LineString geometry for each edge and return a 
-        geopandas.GeoDataFrame containing those geometries.
-        """
-        pgdf = gpd.GeoDataFrame({'geometry': self.edge_linestrings})
-        return pgdf
 
 class Land(gpd.GeoDataFrame):
     """
@@ -192,6 +164,13 @@ class Land(gpd.GeoDataFrame):
             edge intersection with land. If zero, paths that touch the coast will
             be eliminated. The default (1.0 m) allows for paths directly along the 
             coastline.
+        simplify_tolerance : float, optional
+            The simplification tolerance for the geometry in projection units (meters). 
+            If a float value is supplied, the land geometry will be simplified so
+            that verticies are removed until the remaining verticies are within this
+            tolerance distance from each other. The default value is `None`, which 
+            means that no simplification takes place. For more details see the docs for
+            `shapely.BaseGeometry.simplify`.
             
         Returns
         -------
@@ -201,6 +180,15 @@ class Land(gpd.GeoDataFrame):
         # creation differently to allow for columns to be attributes.
         object.__setattr__(self, 'shrink', kwargs.pop('shrink', 1.0))
         object.__setattr__(self, 'simplify_tolerance', kwargs.pop('simplify_tolerance', None))
+        # handle crs for when a land object is created by calling `Land(gdf)` where
+        # `gdf` is an existing geodataframe.
+        try:
+            crs = args[0].crs
+        except:
+            crs = None
+
+        if "crs" not in kwargs.keys():
+            kwargs["crs"] = crs
         super(Land, self).__init__(*args, **kwargs)
         self._init_properties()
 
@@ -230,8 +218,14 @@ class Land(gpd.GeoDataFrame):
         """
         return line.intersects(self.land_shrunk)
 
-    def fresh_graph(self):
-        G = CoastalGraph()
+    def point_on_land(self, point):
+        return point.intersects(self.land_geom)
+
+    def empty_graph(self):
+        """
+        Create a `MadGraph` object that contains coastal nodes without edges.
+        """
+        G = MadGraph()
         G.add_nodes_from(self.exterior_coord_list)
         return G
 
@@ -254,8 +248,12 @@ class Land(gpd.GeoDataFrame):
             print "It took %i minutes to load %i edges." % ((time.time() - t0)/60, graph.number_of_edges() )
         return graph
 
-    def graph(self, n_jobs=6, radius=None, verbose=False):
-        G = self.fresh_graph()
+    def build_graph(self, n_jobs=6, radius=None, verbose=False):
+        """
+        Build a `MadGraph` object representing all the aquatic paths required to navigate
+        around land without crossing it.
+        """
+        G = self.empty_graph()
         G = self.add_ocean_edges_complete(G, n_jobs=n_jobs, radius=radius, verbose=verbose)
         return G
 

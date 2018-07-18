@@ -271,7 +271,7 @@ def extract_poly_exterior_coords(geom):
     else:
         raise ValueError('Unhandled geometry type: ' + repr(geom.type))
     return exterior_coords
-    
+
 def extract_poly_exterior_lines(geom):
     """Extract the exterior lines from a polygon or multipolygon.
 
@@ -320,7 +320,7 @@ def get_coastline_geom(shape):
     if shape is not None:
         # handle filepath strings or geodataframes
         if type(shape) == str:
-            cldf = gpd.read_file(shape_fn)
+            cldf = gpd.read_file(shape)
         else:
             # assume it's a GeoDataFrame
             cldf = shape

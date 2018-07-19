@@ -502,6 +502,19 @@ class RiverGraph(nx.DiGraph):
             pnts = pnts.join(dser)
         return RiverDist(pnts)
 
+    def join_mad_graph(self, mg, n_jobs=6, radius=None):
+        link_nodes = self.deadend_gdf().query("end_type != 'Inland'")
+        is_in_mad = lambda p: point_to_tuple(p) in mg.nodes()
+        link_nodes['in_mad'] = link_nodes.geometry.apply(is_in_mad)
+        link_nodes = link_nodes.query("in_mad == False").geometry.apply(point_to_tuple).tolist()
+        if len(link_nodes):
+            mg = self.land.add_ocean_edges_for_nodes(mg, link_nodes, n_jobs=n_jobs, radius=radius)
+        total_multidigraph = add_reverse(nx.compose(self, mg.to_directed()))
+        
+        linked_mg = self.land
+        
+        return total_multidigraph
+        
     def plot(self, **kwargs):
         """
         Invoke networkx.draw_networkx_edges for a RiverGraph instance.

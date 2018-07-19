@@ -33,6 +33,17 @@ class MadGraph(nx.Graph):
     def from_gpickle(cls, file_path):
         return nx.read_gpickle(file_path)
 
+    def round_nodes(self, decimal_places=3):
+    	"""
+		Round all node coordinates in place. Assuming meters as units, the
+		default value of 3 decimal places means that nodes will be rounded
+		to the nearest millimeter.
+    	"""
+        myround = lambda f: round(f, decimal_places)
+        tround = lambda t: tuple([myround(f) for f in t])
+        self = nx.relabel_nodes(self, tround, copy=False)
+        return self
+
     @property
     def edge_linestrings(self):
         """

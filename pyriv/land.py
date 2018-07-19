@@ -27,8 +27,8 @@ def ocean_edges_for_node(node, land_poly, node_list, radius=None):
         The node to calculate edges for.
     land_poly : shapely Polygon or Multipolygon
         The (shrunken) land geometry being used to create a MadGraph
-    node_list
-
+    node_list : list-like
+        List of nodes to calculate edges too.
     radius : float
         The radius (in meters) for which to evaluate edge connections.
 
@@ -230,6 +230,9 @@ class Land(gpd.GeoDataFrame):
         return G
 
     def add_ocean_edges_complete(self, graph, n_jobs=6, radius=None, verbose=False):
+        """
+        
+        """
         if verbose:
             import time
             t0 = time.time()
@@ -240,6 +243,28 @@ class Land(gpd.GeoDataFrame):
         oe_node = partial(ocean_edges_for_node, land_poly=self.land_shrunk, node_list=graph.nodes(), radius=radius)
         pool = Pool(processes=n_jobs)
         ocean_edges = pool.map(oe_node, graph.nodes_iter())
+        # map returns a list of tuples (one for all the edges of each node). We
+        # need that flattened into a single iterable of all the edges.
+        ocean_edges = chain.from_iterable(ocean_edges)
+        graph.add_edges_from(ocean_edges)
+        if verbose:
+            print "It took %i minutes to load %i edges." % ((time.time() - t0)/60, graph.number_of_edges() )
+        return graph
+
+    def add_ocean_edges_for_nodes(self, graph, nodes_to_add, n_jobs=6, radius=None, verbose=False):
+        """
+        
+        """
+        if verbose:
+            import time
+            t0 = time.time()
+            print "Starting at %s to add edges for %i nodes." % (time.asctime(time.localtime(t0)), graph.number_of_nodes() )
+            edge_possibilities = graph.number_of_nodes() * (graph.number_of_nodes() -1)
+            print "We'll have to look at somewhere around %i edge possibilities." % ( edge_possibilities )
+            # print "Node: ",
+        oe_node = partial(ocean_edges_for_node, land_poly=self.land_shrunk, node_list=graph.nodes(), radius=radius)
+        pool = Pool(processes=n_jobs)
+        ocean_edges = pool.map(oe_node, nodes_to_add)
         # map returns a list of tuples (one for all the edges of each node). We
         # need that flattened into a single iterable of all the edges.
         ocean_edges = chain.from_iterable(ocean_edges)

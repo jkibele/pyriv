@@ -79,13 +79,6 @@ def extract_poly_exterior_coords(geom):
         raise ValueError('Unhandled geometry type: ' + repr(geom.type))
     return exterior_coords
 
-def graph_from_coast(coast):
-    """Build a networkx graph for coastal swimmable distance calculations.
-    
-    """
-    if coast.__class__.__name__ != 'GeoDataFrame':
-        coast = gpd.read_file(coast)
-
 def radius_filter(node, node_list, radius=5000):
     node = Point(node)
     pnts = [Point(n) for n in node_list]

@@ -23,7 +23,7 @@ def ocean_edges_for_node(node, land_poly, node_list, radius=None):
 
     Parameters
     ----------
-    node 
+    node
         The node to calculate edges for.
     land_poly : shapely Polygon or Multipolygon
         The (shrunken) land geometry being used to create a MadGraph
@@ -54,9 +54,9 @@ def ocean_edges_for_node(node, land_poly, node_list, radius=None):
 
 class CoastLine(nx.Graph):
     """
-    This class can turn a LineString representation of a coastline into a 
+    This class can turn a LineString representation of a coastline into a
     polygon representation and export a pyriv.land.Land object. Multipart
-    lines will be exploded into single parts. Single part lines will be 
+    lines will be exploded into single parts. Single part lines will be
     arranged in order to generate polygon output.
     """
     def __init__(self, *args, **kwargs):
@@ -92,7 +92,7 @@ class CoastLine(nx.Graph):
         """
         Create a CoastLine oject from a shapefile. If given a shapefile with
         MultiLineString geometries, these will be exploded into singlepart
-        LineStrings. Shapes are not simplified on inport, meaning that all 
+        LineStrings. Shapes are not simplified on inport, meaning that all
         nodes are maintained in the graph.
 
         Parameters
@@ -100,13 +100,13 @@ class CoastLine(nx.Graph):
         shp_fn : str
             Either the absolute or relative path to the file or URL to be opened.
         bbox : tuple | GeoDataFrame or GeoSeries, default None
-            Filter features by given bounding box, GeoSeries, or GeoDataFrame. 
+            Filter features by given bounding box, GeoSeries, or GeoDataFrame.
             CRS mis-matches are resolved if given a GeoSeries or GeoDataFrame.
         **kwargs:
-            Keyword args to be passed to the open or BytesCollection method in 
-            the fiona library when opening the file. For more information on 
+            Keyword args to be passed to the open or BytesCollection method in
+            the fiona library when opening the file. For more information on
             possible keywords, type: import fiona; help(fiona.open)
-        
+
         Returns
         -------
         CostLine
@@ -119,24 +119,24 @@ class CoastLine(nx.Graph):
             sp_shp = explode(gdf).to_file(shp_fn)
         dig = nx.read_shp(shp_fn, simplify=False)
         return cls(dig, crs=gdf.crs)
-    
+
     def connected_subgraphs(self):
         """
         Return an iterator of connected subgraphs. See networkx.connected_component_subgraphs
         documentation for additional information.
         """
         return nx.connected_component_subgraphs(self)
-    
+
     def rings(self):
         """
-        Return a list of 
+        Return a list of
         """
         rings = [list(nx.dfs_preorder_nodes(sg)) for sg in self.connected_subgraphs()]
         return rings
-    
+
     def polygons(self):
         return [Polygon(r) for r in self.rings()]
-    
+
     def poly_geodataframe(self):
         gdf = gpd.GeoDataFrame({'geometry': self.polygons()})
         gdf.crs = self.crs
@@ -156,22 +156,22 @@ class Land(gpd.GeoDataFrame):
     def __init__(self, *args, **kwargs):
         """
         Build a RiverGraph object.
-        
+
         Parameters
         ----------
         shrink : float, optional
             The distance (in meters) that land will be shrunk by for calculating
             edge intersection with land. If zero, paths that touch the coast will
-            be eliminated. The default (1.0 m) allows for paths directly along the 
+            be eliminated. The default (1.0 m) allows for paths directly along the
             coastline.
         simplify_tolerance : float, optional
-            The simplification tolerance for the geometry in projection units (meters). 
+            The simplification tolerance for the geometry in projection units (meters).
             If a float value is supplied, the land geometry will be simplified so
             that verticies are removed until the remaining verticies are within this
-            tolerance distance from each other. The default value is `None`, which 
+            tolerance distance from each other. The default value is `None`, which
             means that no simplification takes place. For more details see the docs for
             `shapely.BaseGeometry.simplify`.
-            
+
         Returns
         -------
           A Land object
@@ -219,7 +219,7 @@ class Land(gpd.GeoDataFrame):
         return line.intersects(self.land_shrunk)
 
     def point_on_land(self, point):
-        return point.intersects(self.land_geom)
+        return point.within(self.land_geom)
 
     def empty_graph(self):
         """
@@ -231,29 +231,31 @@ class Land(gpd.GeoDataFrame):
 
     def add_ocean_edges_complete(self, graph, n_jobs=6, radius=None, verbose=False):
         """
-        
+
         """
-        if verbose:
-            import time
-            t0 = time.time()
-            print "Starting at %s to add edges for %i nodes." % (time.asctime(time.localtime(t0)), graph.number_of_nodes() )
-            edge_possibilities = graph.number_of_nodes() * (graph.number_of_nodes() -1)
-            print "We'll have to look at somewhere around %i edge possibilities." % ( edge_possibilities )
-            # print "Node: ",
-        oe_node = partial(ocean_edges_for_node, land_poly=self.land_shrunk, node_list=graph.nodes(), radius=radius)
-        pool = Pool(processes=n_jobs)
-        ocean_edges = pool.map(oe_node, graph.nodes_iter())
-        # map returns a list of tuples (one for all the edges of each node). We
-        # need that flattened into a single iterable of all the edges.
-        ocean_edges = chain.from_iterable(ocean_edges)
-        graph.add_edges_from(ocean_edges)
-        if verbose:
-            print "It took %i minutes to load %i edges." % ((time.time() - t0)/60, graph.number_of_edges() )
+        # if verbose:
+        #     import time
+        #     t0 = time.time()
+        #     print "Starting at %s to add edges for %i nodes." % (time.asctime(time.localtime(t0)), graph.number_of_nodes() )
+        #     edge_possibilities = graph.number_of_nodes() * (graph.number_of_nodes() -1)
+        #     print "We'll have to look at somewhere around %i edge possibilities." % ( edge_possibilities )
+        #     # print "Node: ",
+        # oe_node = partial(ocean_edges_for_node, land_poly=self.land_shrunk, node_list=graph.nodes(), radius=radius)
+        # pool = Pool(processes=n_jobs)
+        # ocean_edges = pool.map(oe_node, graph.nodes_iter())
+        # # map returns a list of tuples (one for all the edges of each node). We
+        # # need that flattened into a single iterable of all the edges.
+        # ocean_edges = chain.from_iterable(ocean_edges)
+        # graph.add_edges_from(ocean_edges)
+        # if verbose:
+        #     print "It took %i minutes to load %i edges." % ((time.time() - t0)/60, graph.number_of_edges() )
+        graph = self.add_ocean_edges_for_nodes(graph, graph.nodes_iter(), n_jobs=n_jobs,
+                                               radius=radius, verbose=verbose)
         return graph
 
     def add_ocean_edges_for_nodes(self, graph, nodes_to_add, n_jobs=6, radius=None, verbose=False):
         """
-        
+
         """
         if verbose:
             import time
@@ -280,6 +282,7 @@ class Land(gpd.GeoDataFrame):
         """
         G = self.empty_graph()
         G = self.add_ocean_edges_complete(G, n_jobs=n_jobs, radius=radius, verbose=verbose)
+        G = add_reverse(G)
         return G
 
     @property
@@ -288,7 +291,7 @@ class Land(gpd.GeoDataFrame):
         A list of tuples representing all exterior coordinates from polygon geometries.
         """
         return reduce(lambda x,y: x + y, self.geometry.apply(extract_poly_exterior_coords))
-    
+
     @property
     def n_exterior_coords(self):
         """
@@ -299,5 +302,5 @@ class Land(gpd.GeoDataFrame):
     def complexity_statement(self):
         n = self.n_exterior_coords
         return "{} nodes and around {} edge possibilities.".format(n, n * (n - 1))
-    
-    
+
+

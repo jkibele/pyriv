@@ -1,12 +1,26 @@
 import networkx as nx
 import numpy as np
 import json
+import math
 from shapely import ops
 from shapely.geometry import LineString, MultiLineString, point, Point, LinearRing
 from shapely.geometry.polygon import Polygon
 from shapely.geometry.multipolygon import MultiPolygon
 import geopandas as gpd
 import pandas as pd
+
+
+class puple(tuple):
+    def distance(self, other):
+        return math.sqrt((self[0] - other[0]) ** 2 + (self[1] - other[1]) ** 2)
+
+    def __eq__(self, other):
+        tol = 1e-3
+        return self.distance(other) <= tol
+
+    @classmethod
+    def from_tuple(cls, t):
+        return cls(t)
 
 def node_rounding(graph, decimal_places=3):
     myround = lambda f: round(f, decimal_places)
@@ -20,7 +34,7 @@ def add_geom_edge(graph, path, reverse_too=True):
     the edge attributes. The end and/or start nodes should be
     rounded to the same precision as the network you want to attach
     it to.
-    
+
     Parameters
     ----------
       graph : NetworkX.Graph or NetworkX.DiGraph
@@ -28,7 +42,7 @@ def add_geom_edge(graph, path, reverse_too=True):
         Define reverse_too=True to add reverse edge (reverse_too=False establishes directionality).
       path : Shapely.LineString or Shapely.MultiLineString
         A shapely linestring that gives attributes to the new edge.
-    
+
     Returns
     ----------
       graph : NetworkX.Graph or NetworkX.DiGraph
@@ -57,12 +71,12 @@ def json_linestring_reverse(ls_json):
     Reverses vertices within a JSON-encoded linestring. Used to edit attribute
     dictionary (redefine 'Json' attribute) in reverse edge of NetworkX.Graph
     when you are reversing an edge that's been added by a Shapely Linestring geometry.
-    
+
     Parameters
     ----------
       ls_json : GeoJSON-encoded linestring
         Attribute 'Json' of NetworkX.Graph edge, containing coordinates of a Shapely LineString.
-    
+
     Returns
     ----------
       rev_json : GeoJSON-encoded linestring
@@ -78,12 +92,12 @@ def full_reverse(G):
     """
     This will reverse all of the linestring path between nodes as well as the
     order of all nodes.
-    
+
     Parameters
     ----------
       G : NetworkX.DiGraph
         A directed NetworkX graph.
-    
+
     Returns
     ----------
       G: NetworkX.DiGraph
@@ -96,22 +110,22 @@ def full_reverse(G):
             ls_json = G[n0][n1]['Json']
             G[n0][n1]['Json'] = json_linestring_reverse(ls_json)
         except KeyError:
-            # This means there's no json path so we don't need to 
+            # This means there's no json path so we don't need to
             # reverse it.
             pass
     return G
 
 def add_reverse(G):
     """
-    Make a fully reversed directional copy and add it to the original. 
+    Make a fully reversed directional copy and add it to the original.
     This will let us find the proper path up and down the same river.
-    
+
     Parameters
     ----------
       G: NetworkX.DiGraph
         A directed NetworkX graph. This function reverses the direction of all graph
         edges in a directed graph.
-    
+
     Returns
     ----------
       nx.compose(G, rG) : NetworkX.Graph
@@ -124,7 +138,7 @@ def add_reverse(G):
 def explode(indf):
     """
     Change a multipolygon geodataframe into a single polygon geodataframe.
-    
+
     Code borrowed from: https://gist.github.com/mhweber/cf36bb4e09df9deee5eb54dc6be74d26
     """
     #indf = gpd.GeoDataFrame.from_file(indata)
@@ -153,8 +167,8 @@ def path_completion(land_df, path_geom):
         ncp = nearest_coast_pnt(land_df, path_geom)
         ret_path = LineString((path_geom, ncp))
     return ret_path
-    
-    
+
+
 
 def nearest_coast_pnt(land_df, riv_mouth_pnt, return_dist=False):
     """
@@ -170,7 +184,7 @@ def nearest_coast_pnt(land_df, riv_mouth_pnt, return_dist=False):
         lglr = LinearRing(land_df[in_poly].geometry.iloc[0].exterior)
         c_dist = lglr.project(riv_mouth_pnt)
         c_pnt = lglr.interpolate(c_dist)
-    
+
     if return_dist:
         return riv_mouth_pnt.distance(c_pnt)
     else:
@@ -182,11 +196,11 @@ def nearest_river_pnt(riv_df, pnt, return_dist=False, threshold=None):
     """
     nearest_riv = riv_df.loc[riv_df.distance(pnt).argmin()]
     rivdist = nearest_riv.geometry.distance(pnt)
-    
+
     r_geom = nearest_riv.geometry
     r_dist = r_geom.project(pnt)
     r_pnt = r_geom.interpolate(r_dist)
-    
+
     if return_dist:
         return pnt.distance(r_pnt)
     elif threshold:
@@ -200,7 +214,7 @@ def nearest_river_pnt(riv_df, pnt, return_dist=False, threshold=None):
 def deadend_distances(shp_file, riv_graph, node_distance=False):
     """
     I think I've superseded this with RiverGraph.river_distances. I'll probably
-    delete this. 
+    delete this.
 
     Assumes projection units are meters for the moment.
     """
@@ -250,12 +264,12 @@ def point_to_tuple(g):
 
 def extract_poly_exterior_coords(geom):
     """Extract the exterior coordinates from a polygon or multipolygon.
-    
+
     Returns
     -------
     list of tuples
         All the exterior coordinates of geom.
-    
+
     Notes
     -----
     This code was adapted from an answer on stackexchange:
@@ -279,12 +293,12 @@ def extract_poly_exterior_lines(geom):
     ----------
     geom : shapely Polygon or MultiPolygon
         The polygon that you'd like to turn into an exterior line.
-    
+
     Returns
     -------
     LineString or MultiLineString
         All the exterior rings of geom.
-    
+
     """
     if geom.type == 'Polygon':
         exterior_lines = np.array(geom.exterior.coords)
@@ -300,14 +314,14 @@ def extract_poly_exterior_lines(geom):
 
 def get_coastline_geom(shape):
     """
-    Read a shapefile, convert polygons to lines if necessary, run unary_union 
-    on the geometries and return the resulting geometry. In the case of a 
+    Read a shapefile, convert polygons to lines if necessary, run unary_union
+    on the geometries and return the resulting geometry. In the case of a
     coastline, this will be a multilinestring of the coast.
 
     Parameters
     ----------
       shape : geopandas.GeoDataFrame or string
-        A geodataframe or the filepath to a shapefile. Can be a polygon or a 
+        A geodataframe or the filepath to a shapefile. Can be a polygon or a
         line shapefile.
 
     Returns
@@ -324,7 +338,7 @@ def get_coastline_geom(shape):
         else:
             # assume it's a GeoDataFrame
             cldf = shape
-        
+
         # handle lines or polygons
         if cldf.geom_type.apply(lambda s: s.find("Polygon") >= 0).all():
             cldf = cldf.set_geometry(cldf.geometry.apply(extract_poly_exterior_lines))

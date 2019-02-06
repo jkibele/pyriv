@@ -5,7 +5,6 @@ from graph_prep import GraphBuilder
 from river_dist import RiverDist
 from land import Land, CoastLine
 import units
-import coastal
 
 __author__ = """Jared Kibele"""
 __email__ = 'jkibele@nceas.ucsb.edu'

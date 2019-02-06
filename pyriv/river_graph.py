@@ -5,22 +5,23 @@ from shapely.geometry import LineString, point, Point
 import geopandas as gpd
 from .common import *
 from .river_dist import RiverDist
+from .mad_graph import MadGraph
 from .land import Land
 
 class RiverGraph(nx.DiGraph):
     """
     A graph representation of a river network.
-    
+
     See RiverGraph.__init__ docstring
     """
     def __init__(self, *args, **kwargs):
         """
         Build a RiverGraph object.
-        
+
         Parameters
         ----------
         data : networkx.DiGraph or path to shapefile
-            This is what the river network graph will be built from. If it's a 
+            This is what the river network graph will be built from. If it's a
             path to a shapefile, it'll be converted to a networkx graph.
         coastline : path to a polygon shapefile or a pyriv.Land object
             This is a polygon representation of the coastline. If you only have
@@ -33,9 +34,9 @@ class RiverGraph(nx.DiGraph):
             The number of places to round the node coordinates to. The default
             (3) will round coordinates to the nearest millimeter (assuming a
             projection with meters as units). This helps to avoid floating point
-            errors that can cause the same node to be not equivalent. If set to 
+            errors that can cause the same node to be not equivalent. If set to
             `None`, no rounding will take place.
-            
+
         Returns
         -------
           A RiverGraph object
@@ -58,16 +59,18 @@ class RiverGraph(nx.DiGraph):
             if type(kwargs["data"]) == str:
                 # handle a shapefile path
                 kwargs["data"] = nx.read_shp(kwargs["data"])
-                
+
         if "riv_mouth_buffer" in kwargs.keys():
             self.riv_mouth_buffer = kwargs["riv_mouth_buffer"]
         else:
             self.riv_mouth_buffer = 1.5
-        
+
         rnd = kwargs.pop('rounding', 3)
         super(RiverGraph, self).__init__(*args, **kwargs)
         if rnd is not None:
             self.__round(rnd)
+        # else:
+        #     nx.relabel_nodes(self, puple, copy=False)
 
     def __round(self, decimal_places=3):
         myround = lambda f: round(f, decimal_places)
@@ -75,6 +78,21 @@ class RiverGraph(nx.DiGraph):
         self = nx.relabel_nodes(self, tround, copy=False)
         # self.round_all_edge_paths(decimal_places=decimal_places)
         return self
+
+    # I'm experimenting
+    # def __contains__(self, n):
+    #     """Return True if n is a node, False otherwise. Use: 'n in G'.
+    #
+    #     Examples
+    #     --------
+    #     >>> G = nx.path_graph(4)  # or DiGraph, MultiGraph, MultiDiGraph, etc
+    #     >>> 1 in G
+    #     True
+    #     """
+    #     try:
+    #         return np.isclose(n, self.nodes(), rtol=0.0, atol=1e-6).all(axis=1).any()
+    #     except TypeError:
+    #         return False
 
     def write_gpickle(self, file_path):
         nx.write_gpickle(self, file_path)
@@ -102,13 +120,13 @@ class RiverGraph(nx.DiGraph):
             self._river_mouths_cache = ddf[ddf.is_coastal].geometry.apply(lambda g: tuple(np.array(g))).tolist()
             self._inland_deadends_cache = ddf[~ddf.is_coastal].geometry.apply(lambda g: tuple(np.array(g))).tolist()
         return self._inland_deadends_cache
-    
+
     @property
     def river_deadends(self):
         if not self._deadends_cache:
             self._deadends_cache = self.deadends()
         return self._deadends_cache
-    
+
     def delete_cache(self):
         """
         Delete `_river_mouths_cache`, `_inland_deadends_cache`, and `_deadends_cache`.
@@ -226,7 +244,7 @@ class RiverGraph(nx.DiGraph):
     @property
     def edge_geodataframe(self):
         """
-        Create a shapely LineString geometry for each edge and return a 
+        Create a shapely LineString geometry for each edge and return a
         geopandas.GeoDataFrame containing those geometries.
         """
         pgdf = gpd.GeoDataFrame({'geometry': self.edge_linestrings})
@@ -285,7 +303,7 @@ class RiverGraph(nx.DiGraph):
 
     def deadend_gdf(self, dist=None, tolerance=1e-5):
         """
-        Create a point geodataframe of deadend nodes attributed with wheter each 
+        Create a point geodataframe of deadend nodes attributed with wheter each
         deadend is coastal or inland.
 
         Parameters
@@ -294,7 +312,7 @@ class RiverGraph(nx.DiGraph):
             Threshold distance from the coast for a node to be considered coastal.
             Distance units are the units of the geographic projection. In the case
             of Alaska Albers the unit is meters. If `dist` is left as the default
-            value `None`, the value from the `RiverGraph.riv_mouth_buffer` 
+            value `None`, the value from the `RiverGraph.riv_mouth_buffer`
             attribute will be used (default is 1.5).
         tolerance : float
             Points within this distance of the nearest coastal node will be
@@ -305,8 +323,13 @@ class RiverGraph(nx.DiGraph):
         ------
         geodataframe
             Geodataframe of point geometry attributed with boolean `is_coastal` and
-            string `end_type` with values of 'Coastal', 'CoastNode', 'Ocean', and 
-            'Inland'.
+            string `end_type` with values of 'Coastal', 'CoastNode', 'Ocean', and
+            'Inland'. The "Inland" nodes are on land and their distance from the coast
+            (the exterior ring of the `coastline` polygon) is greater than
+            `riv_mouth_buffer`. "Coastal" nodes are on land but within the
+            `riv_mouth_buffer` distance. "Coast Node" deadends are within `tolerance`
+            (default 1e-5 meters) of a coast node (meant to be equivalent after
+            rounding). "Ocean" deadends are not on land.
         """
         if dist is None:
             dist = self.riv_mouth_buffer
@@ -327,7 +350,7 @@ class RiverGraph(nx.DiGraph):
 
     def auto_complete_segments(self, dist=None):
         """
-        Return a geodataframe of linestrings that connect deadends that are on 
+        Return a geodataframe of linestrings that connect deadends that are on
         land within `dist` of the coast to the actual coast.
         """
         degdf = self.deadend_gdf(dist=dist)
@@ -376,7 +399,7 @@ class RiverGraph(nx.DiGraph):
         if include_start:
             rns.append(start_node)
         return nx.subgraph(self, rns)
-    
+
     def downstream_deadends(self, start_node):
         rn = self.reachable_nodes(start_node)
         return [n for n in rn if n in self.river_deadends]
@@ -390,16 +413,16 @@ class RiverGraph(nx.DiGraph):
 
     def has_rivermouth(self, node_list):
         """
-        Given a list of nodes, return `True` if at least one node is a river 
+        Given a list of nodes, return `True` if at least one node is a river
         mouth. Otherwise, return `False`.
         """
         return [n for n in node_list if n in self.river_mouths].any()
-    
+
     def prune_network(self, verbose=False):
         """
         Remove subgraphs of the network that do not connect to the coastline.
         """
-        # weakly_connected_component_subgraphs doesn't work with the 
+        # weakly_connected_component_subgraphs doesn't work with the
         # RiverGraph subclass, so we have to switch it back to DiGraph
         sg = self.graph
         coast_n = 0
@@ -426,7 +449,7 @@ class RiverGraph(nx.DiGraph):
             sfp = self.shortest_full_path(start_node, tcn, weights=weights)
             path_list.append(sfp)
         return path_list
-    
+
     def paths_to_deadends(self, start_node, weights='distance'):
         """
         Return a list of LineStrings that represent the shortest respective
@@ -456,7 +479,7 @@ class RiverGraph(nx.DiGraph):
         else:
             result = ddict[min(ddict.keys())]
         return result
-    
+
     def shortest_path_to_deadend(self, start_node, weights='distance'):
         """
         Return the list of nodes that constitutes the shortest path to the coast.
@@ -488,7 +511,7 @@ class RiverGraph(nx.DiGraph):
         cl_nd = lambda p: self.closest_node(point_to_tuple(p))
         if self.coastline is None:
             path_find = lambda p: self.shortest_path_to_deadend(cl_nd(p))
-        else:    
+        else:
             path_find = lambda p: self.shortest_path_to_coast(cl_nd(p))
         pnts['path'] = pnts.geometry.apply(path_find)
         pth_dist = lambda p: p.length * 0.001
@@ -510,11 +533,9 @@ class RiverGraph(nx.DiGraph):
         if len(link_nodes):
             mg = self.land.add_ocean_edges_for_nodes(mg, link_nodes, n_jobs=n_jobs, radius=radius)
         total_multidigraph = add_reverse(nx.compose(self, mg.to_directed()))
-        
-        linked_mg = self.land
-        
-        return total_multidigraph
-        
+
+        return MadGraph(total_multidigraph)
+
     def plot(self, **kwargs):
         """
         Invoke networkx.draw_networkx_edges for a RiverGraph instance.

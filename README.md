@@ -9,7 +9,7 @@ It's sort of like Google Maps for anadromous fish. Instead of finding paths thro
 
 ## Current Status
 
-PyRiv is still under development. The existing code is functional, but messy. Documentation and clean-up is an ongoing process. Please contact the author if you are interested in using it.
+PyRiv is still under development. The existing code is functional, but could use a bit of refactoring. Documentation and clean-up is an ongoing process. Please contact the author if you are interested in using it.
 
 ## Use Cases
 
